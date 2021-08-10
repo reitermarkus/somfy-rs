@@ -1,20 +1,20 @@
 use std::vec::Vec;
 
 enum ControlCode {
-  My      = 0x1,
-	Up      = 0x2,
-	MyUp    = 0x3,
-	Down    = 0x4,
-	MyDown  = 0x5,
-	UpDown  = 0x6,
-	Prog    = 0x8,
-	SunFlag = 0x9,
-	Flag    = 0xA
+  My = 0x1,
+  Up = 0x2,
+  MyUp = 0x3,
+  Down = 0x4,
+  MyDown = 0x5,
+  UpDown = 0x6,
+  Prog = 0x8,
+  SunFlag = 0x9,
+  Flag = 0xA,
 }
 
 #[derive(Debug)]
 struct Frame {
-  payload: Vec<u8>
+  payload: Vec<u8>,
 }
 
 impl Frame {
@@ -39,9 +39,7 @@ impl Frame {
 
     payload[1] |= checksum;
 
-    Frame {
-      payload
-    }
+    Frame { payload }
   }
 }
 
