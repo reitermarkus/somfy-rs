@@ -1,4 +1,7 @@
-use ux::{u24};
+use ux::u24;
+
+mod remote;
+pub use remote::Remote;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
@@ -26,6 +29,12 @@ pub struct Frame {
 impl Frame {
   pub fn builder() -> FrameBuilder {
     FrameBuilder::new()
+  }
+
+  pub(crate) fn as_bytes(&self) -> &[u8] {
+    // SAFETY: This is safe because a `Frame` is always
+    // exactly 7 bytes containing valid data.
+    unsafe { core::mem::transmute::<&Frame, &[u8; 7]>(self) }
   }
 
   // Obfuscate the message by XOR'ing all bytes.
