@@ -8,7 +8,7 @@
        ╭───────────────────────╮
 byte 0 │    ENCRYPTION KEY     │
        ├───────────┬───────────┤
-     1 │  BUTTON   │ CHECKSUM  │
+     1 │  COMMAND  │ CHECKSUM  │
        ├───────────┴───────────┤
      2 │      ROLLING CODE     │
        │╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌│
