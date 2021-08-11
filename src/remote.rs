@@ -1,6 +1,5 @@
-use embedded_hal::blocking::delay::DelayUs;
-use embedded_hal::digital::OutputPin;
-use embedded_hal::digital::PinState::{self, *};
+use embedded_hal::blocking::delay::{DelayUs, DelayMs};
+use embedded_hal::digital::{OutputPin, PinState::{self, *}};
 
 use super::*;
 
@@ -17,10 +16,10 @@ pub struct Remote<T, D> {
   pub delay: D,
 }
 
-impl<T, D> Remote<T, D>
+impl<T, D, E> Remote<T, D>
 where
-  T: OutputPin,
-  D: DelayUs<u16, Error = <T as OutputPin>::Error>,
+  T: OutputPin<Error = E>,
+  D: DelayUs<u16, Error = E> + DelayMs<u8, Error = E>,
 {
   /// Send a `Frame` once.
   pub fn send_frame(&mut self, frame: &Frame) -> Result<(), T::Error> {
@@ -49,7 +48,7 @@ where
     }
 
     self.send_state(Low, 415)?;
-    self.delay.try_delay_us(30)?;
+    self.delay.try_delay_ms(30)?;
 
     Ok(())
   }
@@ -57,7 +56,7 @@ where
   fn wake_up(&mut self) -> Result<(), T::Error> {
     self.send_state(High, 9415)?;
     self.send_state(Low, 9415)?;
-    self.delay.try_delay_us(80)?;
+    self.delay.try_delay_ms(80)?;
 
     Ok(())
   }
