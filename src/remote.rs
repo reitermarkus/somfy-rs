@@ -1,11 +1,11 @@
 use core::fmt;
 
-use embedded_hal::blocking::delay::{DelayUs, DelayMs};
+use embedded_hal::blocking::delay::DelayUs;
 use embedded_hal::digital::{OutputPin, PinState::{self, *}};
 
 use super::*;
 
-const SYMBOL_RATE: u16 = 640;
+const SYMBOL_WIDTH: u32 = 1280;
 
 #[derive(Debug, Clone, Copy)]
 enum SyncType {
@@ -32,7 +32,7 @@ where
 impl<T, D, E> Remote<T, D>
 where
   T: OutputPin<Error = E>,
-  D: DelayUs<u16, Error = E> + DelayMs<u8, Error = E>,
+  D: DelayUs<u32, Error = E>,
 {
   /// Send a `Frame` once.
   pub fn send_frame(&mut self, frame: &Frame) -> Result<(), T::Error> {
@@ -60,18 +60,12 @@ where
       self.send_byte(byte)?;
     }
 
-    self.send_state(Low, 415)?;
-    self.delay.try_delay_ms(30)?;
-
-    Ok(())
+    self.inter_frame_gap()
   }
 
   fn wake_up(&mut self) -> Result<(), T::Error> {
     self.send_state(High, 9415)?;
-    self.send_state(Low, 9415)?;
-    self.delay.try_delay_ms(80)?;
-
-    Ok(())
+    self.send_state(Low, 89565)
   }
 
   fn hardware_sync(&mut self, sync_type: SyncType) -> Result<(), T::Error> {
@@ -81,8 +75,8 @@ where
     };
 
     for _ in 0..sync_count {
-      self.send_state(High, 4 * SYMBOL_RATE)?;
-      self.send_state(Low, 4 * SYMBOL_RATE)?;
+      self.send_state(High, 2 * SYMBOL_WIDTH)?;
+      self.send_state(Low, 2 * SYMBOL_WIDTH)?;
     }
 
     Ok(())
@@ -90,14 +84,16 @@ where
 
   fn software_sync(&mut self) -> Result<(), T::Error> {
     self.send_state(High, 4550)?;
-    self.send_state(Low, SYMBOL_RATE)?;
-    Ok(())
+    self.send_state(Low, SYMBOL_WIDTH / 2)
   }
 
-  fn send_state(&mut self, state: PinState, time: u16) -> Result<(), T::Error> {
+  fn inter_frame_gap(&mut self) -> Result<(), T::Error> {
+    self.send_state(Low, 30415)
+  }
+
+  fn send_state(&mut self, state: PinState, time: u32) -> Result<(), T::Error> {
     self.transmitter.try_set_state(state)?;
-    self.delay.try_delay_us(time)?;
-    Ok(())
+    self.delay.try_delay_us(time)
   }
 
   // Send a byte, starting with the most significant bit.
@@ -117,9 +113,7 @@ where
       (High, Low)
     };
 
-    self.send_state(from, SYMBOL_RATE)?;
-    self.send_state(to, SYMBOL_RATE)?;
-
-    Ok(())
+    self.send_state(from, SYMBOL_WIDTH / 2)?;
+    self.send_state(to, SYMBOL_WIDTH / 2)
   }
 }
