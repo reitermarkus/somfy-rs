@@ -1,3 +1,5 @@
+use core::fmt;
+
 use embedded_hal::blocking::delay::{DelayUs, DelayMs};
 use embedded_hal::digital::{OutputPin, PinState::{self, *}};
 
@@ -14,6 +16,17 @@ enum SyncType {
 pub struct Remote<T, D> {
   pub transmitter: T,
   pub delay: D,
+}
+
+impl<T, D> fmt::Debug for Remote<T, D>
+where
+  T: fmt::Debug,
+{
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("Remote")
+      .field("transmitter", &self.transmitter)
+      .finish()
+  }
 }
 
 impl<T, D, E> Remote<T, D>
