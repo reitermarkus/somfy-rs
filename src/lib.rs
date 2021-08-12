@@ -6,15 +6,16 @@ pub use remote::Remote;
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum Command {
-  My      = 0x1 << 4,
-  Up      = 0x2 << 4,
-  MyUp    = 0x3 << 4,
-  Down    = 0x4 << 4,
-  MyDown  = 0x5 << 4,
-  UpDown  = 0x6 << 4,
-  Prog    = 0x8 << 4,
-  SunFlag = 0x9 << 4,
-  Flag    = 0xA << 4,
+  My       = 0x1 << 4,
+  Up       = 0x2 << 4,
+  MyUp     = 0x3 << 4,
+  Down     = 0x4 << 4,
+  MyDown   = 0x5 << 4,
+  UpDown   = 0x6 << 4,
+  MyUpDown = 0x7 << 4,
+  Prog     = 0x8 << 4,
+  SunFlag  = 0x9 << 4,
+  Flag     = 0xA << 4,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
