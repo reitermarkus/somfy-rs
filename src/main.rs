@@ -15,6 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let matches = App::new("somfy")
     .arg(Arg::with_name("remote")
       .help("The remote name")
+      .requires("command")
     )
     .arg(Arg::with_name("command")
       .short("c")
