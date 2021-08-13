@@ -1,7 +1,10 @@
 use core::fmt;
 
 use embedded_hal::blocking::delay::DelayUs;
-use embedded_hal::digital::{OutputPin, PinState::{self, *}};
+use embedded_hal::digital::{
+  OutputPin,
+  PinState::{self, *},
+};
 
 use super::*;
 
