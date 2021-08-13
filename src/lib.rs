@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use ux::u24;
 
 mod sender;
@@ -8,6 +10,8 @@ pub use remote::Remote;
 
 mod storage;
 pub use storage::Storage;
+
+pub struct UnknownCommand;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
@@ -22,6 +26,33 @@ pub enum Command {
   Prog     = 0x8 << 4,
   SunFlag  = 0x9 << 4,
   Flag     = 0xA << 4,
+}
+
+impl FromStr for Command {
+  type Err = UnknownCommand;
+
+  fn from_str(s: &str) -> Result<Self, Self::Err> {
+    let commands = [
+      ("my", Command::My),
+      ("up", Command::Up),
+      ("myup", Command::MyUp),
+      ("down", Command::Down),
+      ("mydown", Command::MyDown),
+      ("updown", Command::UpDown),
+      ("myupdown", Command::MyUpDown),
+      ("prog", Command::Prog),
+      ("sunflag", Command::SunFlag),
+      ("flag", Command::Flag),
+    ];
+
+    for (string, variant) in commands {
+      if s.eq_ignore_ascii_case(string) {
+        return Ok(variant)
+      }
+    }
+
+    Err(UnknownCommand)
+  }
 }
 
 #[derive(Default, Debug, Clone, Copy)]
