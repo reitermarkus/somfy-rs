@@ -9,15 +9,9 @@ use ux::u24;
 
 const CONFIG_FILE_PATH: &'static str = "./config.yaml";
 
-macro_rules! format_address {
-  ($address:ident) => {
-    format!("{:#X}", $address)
-  };
-}
-
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct RemoteInfo {
-  address: String,
+  address: u32,
   rolling_code: u16,
 }
 
@@ -43,16 +37,21 @@ impl Serialize for Storage {
 }
 
 impl Storage {
-  pub fn next_rolling_code(&mut self, name: String) -> Option<u16> {
-    let remote_info = self.remotes.get_mut(&name)?;
+  pub fn next_rolling_code(&mut self, name: &String) -> Option<u16> {
+    let remote_info = self.remotes.get_mut(name)?;
     let rolling_code = remote_info.next_rolling_code();
     self.persist().ok()?;
     Some(rolling_code)
   }
 
+  pub fn address(&self, name: &String) -> Option<u24> {
+    let remote_info = self.remotes.get(name)?;
+    Some(u24::new(remote_info.address))
+  }
+
   pub fn add_remote(&mut self, name: String, address: u24, rolling_code: u16) {
     self.remotes.insert(name, RemoteInfo {
-      address: format_address!(address),
+      address: address.into(),
       rolling_code
     });
   }
@@ -115,6 +114,7 @@ fn test_storage() {
 
   println!("{:?}", s);
   assert_eq!(s.remotes.len(), 2);
+  assert_eq!(s.address(&String::from("Remote A")), Some(u24::new(0xAA)));
 
   let remote_a = s.remotes.get_mut("Remote A").unwrap();
   assert_eq!(remote_a.next_rolling_code(), 0xA7 + 1);
