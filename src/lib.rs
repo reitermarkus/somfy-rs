@@ -6,6 +6,8 @@ pub use sender::Sender;
 mod remote;
 pub use remote::Remote;
 
+mod storage;
+
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum Command {
