@@ -3,7 +3,7 @@ use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::str;
 
-use serde::{Serialize, Serializer};
+use serde::{Serialize, Serializer, Deserialize};
 
 use ux::u24;
 
@@ -15,10 +15,16 @@ macro_rules! format_address {
   };
 }
 
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct RemoteInfo {
+  address: String,
+  rolling_code: u16,
+}
+
 #[derive(Debug)]
 pub struct Storage {
   path: String,
-  remotes: HashMap<String, u16>,
+  remotes: HashMap<String, RemoteInfo>,
 }
 
 impl Default for Storage {
@@ -37,21 +43,25 @@ impl Serialize for Storage {
 }
 
 impl Storage {
-  pub fn next_rolling_code(&mut self, address: u24) -> Option<u16> {
-    let rolling_code = self.remotes.get_mut(&format_address!(address))?;
-    *rolling_code = *rolling_code + 1;
-    Some(*rolling_code)
+  pub fn next_rolling_code(&mut self, name: String) -> Option<u16> {
+    let remote_info = self.remotes.get_mut(&name)?;
+    let rolling_code = remote_info.next_rolling_code();
+    self.persist().ok()?;
+    Some(rolling_code)
   }
 
-  pub fn add_remote(&mut self, address: u24, rolling_code: u16) {
-    self.remotes.insert(format_address!(address), rolling_code);
+  pub fn add_remote(&mut self, name: String, address: u24, rolling_code: u16) {
+    self.remotes.insert(name, RemoteInfo {
+      address: format_address!(address),
+      rolling_code
+    });
   }
 
-  pub fn remove_remote(&mut self, address: u24) {
-    self.remotes.remove(&format_address!(address));
+  pub fn remove_remote(&mut self, name: String) {
+    self.remotes.remove(&name);
   }
 
-  pub fn serialize(&self) -> std::io::Result<()> {
+  pub fn persist(&self) -> std::io::Result<()> {
     let mut file = OpenOptions::new()
       .read(true)
       .write(true)
@@ -65,7 +75,7 @@ impl Storage {
     Ok(())
   }
 
-  pub fn deserialize(&mut self) -> std::io::Result<()> {
+  pub fn load(&mut self) -> std::io::Result<()> {
     let mut file = OpenOptions::new()
       .read(true)
       .create(true)
@@ -73,9 +83,16 @@ impl Storage {
 
     let mut buf = String::new();
     file.read_to_string(&mut buf)?;
-    self.remotes = serde_yaml::from_str::<HashMap<String, u16>>(&buf).unwrap();
+    self.remotes = serde_yaml::from_str::<HashMap<String, RemoteInfo>>(&buf).unwrap();
 
     Ok(())
+  }
+}
+
+impl RemoteInfo {
+  fn next_rolling_code(&mut self) -> u16 {
+    self.rolling_code = self.rolling_code + 1;
+    self.rolling_code
   }
 }
 
@@ -83,19 +100,23 @@ impl Storage {
 fn test_storage() {
   let mut s = Storage::default();
 
-  s.add_remote(u24::new(0xAA), 0xA7);
-  s.add_remote(u24::new(0xAF), 0xA7);
+  s.add_remote(String::from("Remote A"), u24::new(0xAA), 0xA7);
+  s.add_remote(String::from("Remote B"), u24::new(0xAF), 0xA7);
 
   let yaml_string = serde_yaml::to_string(&s).unwrap();
   println!("Config file:\n{:?}", yaml_string);
 
-  s.remove_remote(u24::new(0xAA));
-  s.remove_remote(u24::new(0xAF));
+  s.remove_remote(String::from("Remote A"));
+  s.remove_remote(String::from("Remote B"));
 
   assert_eq!(s.remotes.len(), 0);
 
-  s.remotes = serde_yaml::from_str::<HashMap<String, u16>>(&yaml_string).unwrap();
+  s.remotes = serde_yaml::from_str::<HashMap<String, RemoteInfo>>(&yaml_string).unwrap();
 
   println!("{:?}", s);
   assert_eq!(s.remotes.len(), 2);
+
+  let remote_a = s.remotes.get_mut("Remote A").unwrap();
+  assert_eq!(remote_a.next_rolling_code(), 0xA7 + 1);
+  assert_eq!(remote_a.next_rolling_code(), 0xA7 + 2);
 }
