@@ -77,7 +77,6 @@ impl Storage {
   pub fn load(&mut self) -> std::io::Result<()> {
     let mut file = OpenOptions::new()
       .read(true)
-      .create(true)
       .open(&self.path)?;
 
     let mut buf = String::new();
