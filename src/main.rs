@@ -55,7 +55,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let rolling_code = 42;
     let remote_address = u24::new(0xFFAA11);
-    let mut remote = Remote::new(remote_address, rolling_code, sender);
+    let mut remote = Remote::new(remote_address, rolling_code, sender, |rolling_code| {
+      log::info!("New rolling code: {:?}", rolling_code);
+    });
 
     dbg!(&remote);
 

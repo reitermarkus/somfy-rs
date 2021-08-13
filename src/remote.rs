@@ -7,13 +7,14 @@ use embedded_hal::blocking::delay::DelayUs;
 
 use super::*;
 
-pub struct Remote<T, D> {
+pub struct Remote<T, D, C> {
   address: u24,
   rolling_code: u16,
   sender: Sender<T, D>,
+  rolling_code_callback: C,
 }
 
-impl<T, D> fmt::Debug for Remote<T, D>
+impl<T, D, C> fmt::Debug for Remote<T, D, C>
 where
   T: fmt::Debug,
 {
@@ -21,21 +22,23 @@ where
     f.debug_struct("Remote")
       .field("address", &self.address)
       .field("rolling_code", &self.rolling_code)
-      .field("address", &self.sender)
+      .field("sender", &self.sender)
       .finish()
   }
 }
 
-impl<T, D, E> Remote<T, D>
+impl<T, D, C, E> Remote<T, D, C>
 where
   T: OutputPin<Error = E>,
   D: DelayUs<u32, Error = E>,
+  C: FnMut(u16)
 {
-  pub fn new(address: u24, rolling_code: u16, sender: Sender<T, D>) -> Self {
+  pub fn new(address: u24, rolling_code: u16, sender: Sender<T, D>, rolling_code_callback: C) -> Self {
     Self {
       address,
       rolling_code,
       sender,
+      rolling_code_callback,
     }
   }
 
@@ -53,6 +56,7 @@ where
       .unwrap();
 
     self.rolling_code += 1;
+    (self.rolling_code_callback)(self.rolling_code);
 
     self.sender.send_frame_repeat(&frame, repetitions)
   }
