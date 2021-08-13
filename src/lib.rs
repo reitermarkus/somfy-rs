@@ -1,3 +1,5 @@
+use std::fmt;
+use std::error::Error;
 use std::str::FromStr;
 
 use ux::u24;
@@ -11,7 +13,20 @@ pub use remote::Remote;
 mod storage;
 pub use storage::Storage;
 
+#[derive(Debug)]
 pub struct UnknownCommand;
+
+impl fmt::Display for UnknownCommand {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      write!(f, "Unknown command")
+  }
+}
+
+impl Error for UnknownCommand {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]

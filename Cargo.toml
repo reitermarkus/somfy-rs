@@ -9,3 +9,6 @@ embedded-hal = "1.0.0-alpha.4"
 rppal = { features = ["hal"], git = "https://github.com/reitermarkus/rppal", branch = "embedded-hal-1.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
+clap = "2.33.3"
+log = "0.4.14"
+env_logger = "0.8.4"
