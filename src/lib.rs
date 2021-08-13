@@ -152,7 +152,7 @@ mod tests {
     let checksum = frame.command_and_checksum & 0b00001111;
 
     assert_eq!(frame.key, 0xA7);
-    //assert_eq!(command, Command::Up as _);
+    assert_eq!(command, Command::Up as u8);
     assert_eq!(checksum, 7);
     assert_eq!(u16::from_be_bytes(frame.rolling_code), rolling_code);
     assert_eq!(
