@@ -1,5 +1,8 @@
 use ux::u24;
 
+mod sender;
+pub use sender::Sender;
+
 mod remote;
 pub use remote::Remote;
 

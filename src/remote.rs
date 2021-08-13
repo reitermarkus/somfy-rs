@@ -1,21 +1,16 @@
 use core::fmt;
 
+use ux::u24;
+
+use embedded_hal::digital::OutputPin;
 use embedded_hal::blocking::delay::DelayUs;
-use embedded_hal::digital::{OutputPin, PinState::{self, *}};
 
 use super::*;
 
-const SYMBOL_WIDTH: u32 = 1280;
-
-#[derive(Debug, Clone, Copy)]
-enum SyncType {
-  Once,
-  Repeat,
-}
-
 pub struct Remote<T, D> {
-  pub transmitter: T,
-  pub delay: D,
+  address: u24,
+  rolling_code: u16,
+  sender: Sender<T, D>,
 }
 
 impl<T, D> fmt::Debug for Remote<T, D>
@@ -24,7 +19,9 @@ where
 {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     f.debug_struct("Remote")
-      .field("transmitter", &self.transmitter)
+      .field("address", &self.address)
+      .field("rolling_code", &self.rolling_code)
+      .field("address", &self.sender)
       .finish()
   }
 }
@@ -34,86 +31,36 @@ where
   T: OutputPin<Error = E>,
   D: DelayUs<u32, Error = E>,
 {
-  /// Send a `Frame` once.
-  pub fn send_frame(&mut self, frame: &Frame) -> Result<(), T::Error> {
-    self.send_frame_repeat(frame, 0)
-  }
-
-  /// Send a `Frame` with a given number of `repetitions`. The total number sent is
-  /// `1 + repetitions`, i.e. `send_frame(…)` is the same as `send_frame_repeat(…, 0)`.
-  pub fn send_frame_repeat(&mut self, frame: &Frame, repetitions: usize) -> Result<(), T::Error> {
-    self.send_frame_with_type(frame, SyncType::Once)?;
-
-    for _ in 0..repetitions {
-      self.send_frame_with_type(frame, SyncType::Repeat)?;
+  pub fn new(address: u24, rolling_code: u16, sender: Sender<T, D>) -> Self {
+    Self {
+      address,
+      rolling_code,
+      sender,
     }
-
-    Ok(())
   }
 
-  fn send_frame_with_type(&mut self, frame: &Frame, sync_type: SyncType) -> Result<(), T::Error> {
-    self.wake_up()?;
-    self.hardware_sync(sync_type)?;
-    self.software_sync()?;
-
-    for &byte in frame.as_bytes() {
-      self.send_byte(byte)?;
-    }
-
-    self.inter_frame_gap()
+  pub fn send(&mut self, command: Command) -> Result<(), E> {
+    self.send_repeat(command, 0)
   }
 
-  fn wake_up(&mut self) -> Result<(), T::Error> {
-    self.send_state(High, 9415)?;
-    self.send_state(Low, 89565)
+  pub fn send_repeat(&mut self, command: Command, repetitions: usize) -> Result<(), E> {
+    let frame = Frame::builder()
+      .key(0xA7)
+      .command(command)
+      .remote_address(self.address)
+      .rolling_code(self.rolling_code)
+      .build()
+      .unwrap();
+
+    self.rolling_code += 1;
+
+    self.sender.send_frame_repeat(&frame, repetitions)
+  }
+  pub fn address(&self) -> u24 {
+    self.address
   }
 
-  fn hardware_sync(&mut self, sync_type: SyncType) -> Result<(), T::Error> {
-    let sync_count = match sync_type {
-      SyncType::Once => 2,
-      SyncType::Repeat => 7,
-    };
-
-    for _ in 0..sync_count {
-      self.send_state(High, 2 * SYMBOL_WIDTH)?;
-      self.send_state(Low, 2 * SYMBOL_WIDTH)?;
-    }
-
-    Ok(())
-  }
-
-  fn software_sync(&mut self) -> Result<(), T::Error> {
-    self.send_state(High, 4550)?;
-    self.send_state(Low, SYMBOL_WIDTH / 2)
-  }
-
-  fn inter_frame_gap(&mut self) -> Result<(), T::Error> {
-    self.send_state(Low, 30415)
-  }
-
-  fn send_state(&mut self, state: PinState, time: u32) -> Result<(), T::Error> {
-    self.transmitter.try_set_state(state)?;
-    self.delay.try_delay_us(time)
-  }
-
-  // Send a byte, starting with the most significant bit.
-  fn send_byte(&mut self, byte: u8) -> Result<(), T::Error> {
-    for bit in 0..=7 {
-      self.send_bit((byte & (1 << (7 - bit))) != 0)?;
-    }
-
-    Ok(())
-  }
-
-  // Send a single bit, using Manchester encoding.
-  fn send_bit(&mut self, bit: bool) -> Result<(), T::Error> {
-    let (from, to) = if bit {
-      (Low, High)
-    } else {
-      (High, Low)
-    };
-
-    self.send_state(from, SYMBOL_WIDTH / 2)?;
-    self.send_state(to, SYMBOL_WIDTH / 2)
+  pub fn rolling_code(&self) -> u16 {
+    self.rolling_code
   }
 }
