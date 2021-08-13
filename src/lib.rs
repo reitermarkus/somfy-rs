@@ -18,14 +18,14 @@ pub struct UnknownCommand;
 
 impl fmt::Display for UnknownCommand {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-      write!(f, "Unknown command")
+    write!(f, "Unknown command")
   }
 }
 
 impl Error for UnknownCommand {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
+  fn source(&self) -> Option<&(dyn Error + 'static)> {
+    None
+  }
 }
 
 #[derive(Debug, Clone, Copy)]
