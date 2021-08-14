@@ -6,8 +6,7 @@ use std::rc::Rc;
 use std::str;
 use std::path::PathBuf;
 
-use serde::{Serialize, Serializer, Deserialize};
-
+use serde::{Serialize, Deserialize};
 use ux::u24;
 
 use super::Remote;
@@ -32,15 +31,6 @@ impl Default for Storage {
   }
 }
 
-impl Serialize for Storage {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: Serializer,
-  {
-    serializer.collect_map(self.remotes.borrow().iter())
-  }
-}
-
 impl Storage {
   pub fn remote(self: Rc<Self>, name: &str) -> Option<Remote<impl FnMut(u24, u16)>> {
     let remotes = self.remotes.borrow();
@@ -52,7 +42,9 @@ impl Storage {
     Some(Remote::new(address, rolling_code, move |address, rolling_code| {
       log::info!("New rolling code: {:?}", rolling_code);
 
-      if let Ok(mut remotes) = this.remotes.try_borrow_mut() {
+      {
+        let mut remotes = this.remotes.borrow_mut();
+
         for (_, ref mut remote_info) in remotes.iter_mut() {
           if remote_info.address == address {
             remote_info.rolling_code = rolling_code;
@@ -87,7 +79,7 @@ impl Storage {
   pub fn persist(&self) -> io::Result<()> {
     let mut file = File::create(&self.path)?;
 
-    if let Err(err) = serde_yaml::to_writer(&mut file, &self) {
+    if let Err(err) = serde_yaml::to_writer(&mut file, &*self.remotes.borrow()) {
       return Err(io::Error::new(io::ErrorKind::Other, err))
     }
 
