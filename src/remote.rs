@@ -7,48 +7,58 @@ use embedded_hal::blocking::delay::DelayUs;
 
 use super::*;
 
-pub struct Remote<T, D, C> {
+pub struct Remote<C> {
   address: u24,
   rolling_code: u16,
-  sender: Sender<T, D>,
   rolling_code_callback: C,
 }
 
-impl<T, D, C> fmt::Debug for Remote<T, D, C>
-where
-  T: fmt::Debug,
-{
+impl<C> fmt::Debug for Remote<C> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     f.debug_struct("Remote")
       .field("address", &self.address)
       .field("rolling_code", &self.rolling_code)
-      .field("sender", &self.sender)
       .finish()
   }
 }
 
-impl<T, D, C> Remote<T, D, C> {
-  pub fn new(address: u24, rolling_code: u16, sender: Sender<T, D>, rolling_code_callback: C) -> Self {
+impl<C> Remote<C> {
+  pub fn new(address: u24, rolling_code: u16, rolling_code_callback: C) -> Self {
     Self {
       address,
       rolling_code,
-      sender,
       rolling_code_callback,
     }
   }
 }
 
-impl<T, D, C, E> Remote<T, D, C>
-where
-  T: OutputPin<Error = E>,
-  D: DelayUs<u32, Error = E>,
-  C: FnMut(u24, u16)
-{
-  pub fn send(&mut self, command: Command) -> Result<(), E> {
-    self.send_repeat(command, 0)
+impl<C> Remote<C> {
+  pub fn address(&self) -> u24 {
+    self.address
   }
 
-  pub fn send_repeat(&mut self, command: Command, repetitions: usize) -> Result<(), E> {
+  pub fn rolling_code(&self) -> u16 {
+    self.rolling_code
+  }
+}
+
+impl<C> Remote<C>
+where
+  C: FnMut(u24, u16),
+{
+  pub fn send<T, D, E>(&mut self, sender: &mut Sender<T, D>, command: Command) -> Result<(), E>
+  where
+    T: OutputPin<Error = E>,
+    D: DelayUs<u32, Error = E>,
+  {
+    self.send_repeat(sender, command, 0)
+  }
+
+  pub fn send_repeat<T, D, E>(&mut self, sender: &mut Sender<T, D>, command: Command, repetitions: usize) -> Result<(), E>
+  where
+    T: OutputPin<Error = E>,
+    D: DelayUs<u32, Error = E>,
+  {
     let frame = Frame::builder()
       .key(0xA7)
       .command(command)
@@ -60,14 +70,6 @@ where
     self.rolling_code += 1;
     (self.rolling_code_callback)(self.address, self.rolling_code);
 
-    self.sender.send_frame_repeat(&frame, repetitions)
-  }
-
-  pub fn address(&self) -> u24 {
-    self.address
-  }
-
-  pub fn rolling_code(&self) -> u16 {
-    self.rolling_code
+    sender.send_frame_repeat(&frame, repetitions)
   }
 }

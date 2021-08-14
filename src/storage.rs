@@ -9,7 +9,7 @@ use serde::{Serialize, Serializer, Deserialize};
 
 use ux::u24;
 
-use super::{Remote, Sender};
+use super::Remote;
 
 const CONFIG_FILE_PATH: &'static str = "./config.yaml";
 
@@ -41,15 +41,14 @@ impl Serialize for Storage {
 }
 
 impl Storage {
-  pub fn remote<T, D>(self: Rc<Self>, name: &str, sender: Sender<T, D>) -> Option<Remote<T, D, impl FnMut(u24, u16)>> {
+  pub fn remote(self: Rc<Self>, name: &str) -> Option<Remote<impl FnMut(u24, u16)>> {
     let remotes = self.remotes.borrow();
     let remote = remotes.get(name)?;
     let address = u24::new(remote.address);
     let rolling_code = remote.rolling_code;
 
-
     let this = Rc::clone(&self);
-    Some(Remote::new(address, rolling_code, sender, move |address, rolling_code| {
+    Some(Remote::new(address, rolling_code, move |address, rolling_code| {
       log::info!("New rolling code: {:?}", rolling_code);
 
       if let Ok(mut remotes) = this.remotes.try_borrow_mut() {

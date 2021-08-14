@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let mut transmitter = gpio.get(TRANSMITTER_PIN)?.into_output();
   transmitter.set_low();
 
-  let sender = Sender {
+  let mut sender = Sender {
     transmitter,
     delay: Delay,
   };
@@ -54,11 +54,11 @@ fn main() -> Result<(), Box<dyn Error>> {
   dbg!(&sender);
 
   if let Some(command) = command {
-    let mut remote = storage.remote(remote_name, sender).unwrap();
+    let mut remote = storage.remote(remote_name).unwrap();
     dbg!(&remote);
 
     log::info!("Sending command “{:?}” with remote “{}”.", command, remote_name);
-    remote.send(command)?;
+    remote.send(&mut sender, command)?;
   }
 
   Ok(())
