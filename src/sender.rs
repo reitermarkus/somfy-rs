@@ -1,4 +1,5 @@
 use core::fmt;
+use core::time::Duration;
 
 use embedded_hal::blocking::delay::DelayUs;
 use embedded_hal::digital::{
@@ -96,7 +97,12 @@ where
 
   fn send_state(&mut self, state: PinState, time: u32) -> Result<(), E> {
     self.transmitter.try_set_state(state)?;
-    self.delay.try_delay_us(time)
+
+    // TODO: https://github.com/golemparts/rppal/issues/40
+    // self.delay.try_delay_us(time)
+    spin_sleep::sleep(Duration::from_micros(time.into()));
+
+    Ok(())
   }
 
   // Send a byte, starting with the most significant bit.
