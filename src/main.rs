@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::rc::Rc;
 
-use clap::{Arg, App};
+use clap::{Arg, App, value_t};
 
 use somfy::*;
 
@@ -25,6 +25,14 @@ fn main() -> Result<(), Box<dyn Error>> {
       .takes_value(true)
       .requires("remote")
     )
+    .arg(Arg::with_name("repetitions")
+      .short("r")
+      .long("repeat")
+      .value_name("REPETITIONS")
+      .help("Number of command repetitions")
+      .takes_value(true)
+      .requires("command")
+    )
     .get_matches();
 
   let remote_name = matches.value_of("remote").unwrap();
@@ -33,6 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   } else {
     None
   };
+  let repetitions = value_t!(matches.value_of("repetitions"), usize).unwrap_or(0);
 
   dbg!(&remote_name);
   dbg!(&command);
@@ -58,7 +67,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     dbg!(&remote);
 
     log::info!("Sending command “{:?}” with remote “{}”.", command, remote_name);
-    remote.send(&mut sender, command)?;
+    remote.send_repeat(&mut sender, command, repetitions)?;
   }
 
   Ok(())
