@@ -1,15 +1,17 @@
 use core::fmt;
 
-use ux::u24;
-
 use embedded_hal::digital::OutputPin;
 use embedded_hal::blocking::delay::DelayUs;
+use serde::{Serialize, Deserialize};
+use ux::u24;
 
 use super::*;
 
+#[derive(Serialize, Deserialize)]
 pub struct Remote<C> {
   address: u24,
   rolling_code: u16,
+  #[serde(skip)]
   rolling_code_callback: C,
 }
 
@@ -22,7 +24,8 @@ impl<C> fmt::Debug for Remote<C> {
   }
 }
 
-impl<C> Remote<C> {
+impl<C> Remote<C>
+{
   pub fn new(address: u24, rolling_code: u16, rolling_code_callback: C) -> Self {
     Self {
       address,
@@ -44,7 +47,7 @@ impl<C> Remote<C> {
 
 impl<C> Remote<C>
 where
-  C: FnMut(u24, u16),
+  C: FnMut(u24, u16)
 {
   pub fn send<T, D, E>(&mut self, sender: &mut Sender<T, D>, command: Command) -> Result<(), E>
   where
