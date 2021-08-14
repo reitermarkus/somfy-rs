@@ -1,7 +1,7 @@
 use std::error::Error;
+use std::rc::Rc;
 
 use clap::{Arg, App};
-use ux::u24;
 
 use somfy::*;
 
@@ -37,32 +37,27 @@ fn main() -> Result<(), Box<dyn Error>> {
   dbg!(&remote_name);
   dbg!(&command);
 
-  let mut storage = Storage::default();
-  storage.load()?;
+  let mut storage = Rc::new(Storage::default());
+  Rc::get_mut(&mut storage).unwrap().load()?;
   dbg!(&storage);
 
+  let gpio = Gpio::new()?;
+
+  let mut transmitter = gpio.get(TRANSMITTER_PIN)?.into_output();
+  transmitter.set_low();
+
+  let sender = Sender {
+    transmitter,
+    delay: Delay,
+  };
+
+  dbg!(&sender);
+
   if let Some(command) = command {
-    let gpio = Gpio::new()?;
-
-    let mut transmitter = gpio.get(TRANSMITTER_PIN)?.into_output();
-    transmitter.set_low();
-
-    let sender = Sender {
-      transmitter,
-      delay: Delay,
-    };
-
-    dbg!(&sender);
-
-    let rolling_code = 42;
-    let remote_address = u24::new(0xFFAA11);
-    let mut remote = Remote::new(remote_address, rolling_code, sender, |rolling_code| {
-      log::info!("New rolling code: {:?}", rolling_code);
-    });
-
+    let mut remote = storage.remote(remote_name, sender).unwrap();
     dbg!(&remote);
 
-    log::info!("Sending command {:?} with remote {}.", command, remote_name);
+    log::info!("Sending command “{:?}” with remote “{}”.", command, remote_name);
     remote.send(command)?;
   }
 

@@ -27,12 +27,7 @@ where
   }
 }
 
-impl<T, D, C, E> Remote<T, D, C>
-where
-  T: OutputPin<Error = E>,
-  D: DelayUs<u32, Error = E>,
-  C: FnMut(u16)
-{
+impl<T, D, C> Remote<T, D, C> {
   pub fn new(address: u24, rolling_code: u16, sender: Sender<T, D>, rolling_code_callback: C) -> Self {
     Self {
       address,
@@ -41,7 +36,14 @@ where
       rolling_code_callback,
     }
   }
+}
 
+impl<T, D, C, E> Remote<T, D, C>
+where
+  T: OutputPin<Error = E>,
+  D: DelayUs<u32, Error = E>,
+  C: FnMut(u24, u16)
+{
   pub fn send(&mut self, command: Command) -> Result<(), E> {
     self.send_repeat(command, 0)
   }
@@ -56,10 +58,11 @@ where
       .unwrap();
 
     self.rolling_code += 1;
-    (self.rolling_code_callback)(self.rolling_code);
+    (self.rolling_code_callback)(self.address, self.rolling_code);
 
     self.sender.send_frame_repeat(&frame, repetitions)
   }
+
   pub fn address(&self) -> u24 {
     self.address
   }
