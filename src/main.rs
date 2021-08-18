@@ -1,11 +1,14 @@
 use std::error::Error;
-use std::rc::Rc;
+use std::process::exit;
 
 use clap::{Arg, App, value_t};
 
+use rppal::{gpio::Gpio, hal::Delay};
+
 use somfy::*;
 
-use rppal::{gpio::Gpio, hal::Delay};
+mod storage;
+use storage::Storage;
 
 const TRANSMITTER_PIN: u8 = 4;
 
@@ -43,12 +46,8 @@ fn main() -> Result<(), Box<dyn Error>> {
   };
   let repetitions = value_t!(matches.value_of("repetitions"), usize).unwrap_or(0);
 
-  dbg!(&remote_name);
-  dbg!(&command);
-
-  let mut storage = Rc::new(Storage::default());
-  Rc::get_mut(&mut storage).unwrap().load()?;
-  dbg!(&storage);
+  let mut storage = Storage::default();
+  storage.load()?;
 
   let gpio = Gpio::new()?;
 
@@ -60,14 +59,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     delay: Delay,
   };
 
-  dbg!(&sender);
-
   if let Some(command) = command {
-    let mut remote = storage.remote(remote_name).unwrap();
-    dbg!(&remote);
+    let remote_result = storage.with_remote(&remote_name, |remote| {
+      log::info!("Sending command “{:?}” with remote “{}”.", command, remote_name);
+      remote.send_repeat(&mut sender, command, repetitions)
+    });
 
-    log::info!("Sending command “{:?}” with remote “{}”.", command, remote_name);
-    remote.send_repeat(&mut sender, command, repetitions)?;
+    if let Some(remote_result) = remote_result {
+      remote_result?;
+    } else {
+      eprintln!("No remote with name “{}” found.", remote_name);
+      exit(1);
+    }
   }
 
   Ok(())

@@ -10,9 +10,6 @@ pub use sender::Sender;
 mod remote;
 pub use remote::Remote;
 
-mod storage;
-pub use storage::Storage;
-
 #[derive(Debug)]
 pub struct UnknownCommand;
 

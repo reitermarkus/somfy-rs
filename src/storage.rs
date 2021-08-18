@@ -1,85 +1,65 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
+use std::error::Error;
 use std::io;
 use std::fs::File;
-use std::rc::Rc;
 use std::str;
 use std::path::PathBuf;
 
-use serde::{Serialize, Deserialize};
 use ux::u24;
 
-use super::Remote;
+use somfy::Remote;
 
 const CONFIG_FILE_PATH: &'static str = "./config.yaml";
-
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct RemoteInfo {
-  address: u24,
-  rolling_code: u16,
-}
 
 #[derive(Debug)]
 pub struct Storage {
   path: PathBuf,
-  remotes: Rc<RefCell<HashMap<String, RemoteInfo>>>,
+  remotes: HashMap<String, Remote>,
 }
 
 impl Default for Storage {
   fn default() -> Self {
-    Self { path: PathBuf::from(CONFIG_FILE_PATH), remotes: Rc::new(RefCell::new(HashMap::new())) }
+    Self { path: PathBuf::from(CONFIG_FILE_PATH), remotes: HashMap::new() }
   }
 }
 
 impl Storage {
-  pub fn remote(self: Rc<Self>, name: &str) -> Option<Remote<impl FnMut(u24, u16)>> {
-    let remotes = self.remotes.borrow();
-    let remote = remotes.get(name)?;
-    let address = remote.address;
-    let rolling_code = remote.rolling_code;
+  pub fn with_remote<C, T, E>(&mut self, name: &str, closure: C) -> Option<io::Result<T>>
+  where
+    E: Into<Box<dyn Error + Send + Sync>>,
+    C: FnOnce(&mut Remote) -> Result<T, E>,
+  {
+    if let Some(remote) = self.remotes.get_mut(name) {
+      let previous_rolling_code = remote.rolling_code();
 
-    let this = Rc::clone(&self);
-    Some(Remote::new(address, rolling_code, move |address, rolling_code| {
-      log::info!("New rolling code: {:?}", rolling_code);
+      let value = closure(remote);
 
-      {
-        let mut remotes = this.remotes.borrow_mut();
-
-        for (_, ref mut remote_info) in remotes.iter_mut() {
-          if remote_info.address == address {
-            remote_info.rolling_code = rolling_code;
-            break;
-          }
+      if previous_rolling_code != remote.rolling_code() {
+        if let Err(err) = self.persist() {
+          return Some(Err(err))
         }
       }
 
-      if let Err(err) = this.persist() {
-        log::error!("{}", err);
-      }
-    }))
+      return Some(value.map_err(|err| io::Error::new(io::ErrorKind::Other, err)))
+    }
+
+    None
   }
 
-  pub fn address(&self, name: &str) -> Option<u24> {
-    let remotes = self.remotes.borrow();
-    let remote_info = remotes.get(name)?;
-    Some(remote_info.address)
-  }
-
+  #[allow(unused)]
   pub fn add_remote(&mut self, name: String, address: u24, rolling_code: u16) {
-    self.remotes.borrow_mut().insert(name, RemoteInfo {
-      address: address.into(),
-      rolling_code
-    });
+    self.remotes.insert(name, Remote::new(address, rolling_code));
   }
 
+  #[allow(unused)]
   pub fn remove_remote(&mut self, name: String) {
-    self.remotes.borrow_mut().remove(&name);
+    self.remotes.remove(&name);
   }
 
   pub fn persist(&self) -> io::Result<()> {
     let mut file = File::create(&self.path)?;
 
-    if let Err(err) = serde_yaml::to_writer(&mut file, &*self.remotes.borrow()) {
+    if let Err(err) = serde_yaml::to_writer(&mut file, &self.remotes) {
       return Err(io::Error::new(io::ErrorKind::Other, err))
     }
 
@@ -91,7 +71,7 @@ impl Storage {
 
     match serde_yaml::from_reader(&mut file) {
       Ok(ok) => {
-        self.remotes = Rc::new(RefCell::new(ok));
+        self.remotes = ok;
         Ok(())
       },
       Err(err) => Err(io::Error::new(io::ErrorKind::Other, err)),
@@ -114,7 +94,7 @@ fn test_storage() {
 
   assert_eq!(s.remotes.len(), 0);
 
-  s.remotes = serde_yaml::from_str::<HashMap<String, RemoteInfo>>(&yaml_string).unwrap();
+  s.remotes = serde_yaml::from_str::<HashMap<String, Remote>>(&yaml_string).unwrap();
 
   println!("{:?}", s);
   assert_eq!(s.remotes.len(), 2);
