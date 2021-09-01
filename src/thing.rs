@@ -155,6 +155,7 @@ where
 
         let command = match target_position {
           0 => Command::Down,
+          50 => Command::My,
           100 => Command::Up,
           p => match p.cmp(&current_position) {
             Ordering::Less => Command::Down,
