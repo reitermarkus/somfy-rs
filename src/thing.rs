@@ -1,7 +1,7 @@
 #![cfg(feature = "server")]
 
 use std::cmp::Ordering;
-use std::fmt::Debug;
+use std::error::Error;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::thread;
@@ -13,40 +13,48 @@ use webthing::{Action, BaseAction, BaseThing, BaseProperty, Thing};
 use webthing::server::ActionGenerator;
 use uuid::Uuid;
 
-use crate::{Command, Remote, Sender};
+use crate::{Command, Remote, Sender, Storage};
 
 struct Generator<T, D> {
   sender: Arc<Mutex<Sender<T, D>>>,
-  remotes: HashMap<String, Arc<RwLock<Remote>>>,
+  storage: Arc<RwLock<Storage>>,
+  remotes: HashMap<String, String>,
 }
 
 impl<T, D, E> ActionGenerator for Generator<T, D>
 where
   T: OutputPin<Error = E> + Send + 'static,
   D: DelayUs<u32, Error = E> + Send + 'static,
-  E: Debug,
+  E: Error + Send + Sync + 'static,
 {
-    fn generate(
-        &self,
-        thing: Weak<RwLock<Box<dyn Thing>>>,
-        name: String,
-        input: Option<&serde_json::Value>,
-    ) -> Option<Box<dyn Action>> {
-        let input = input.and_then(|v| v.as_object()).cloned();
-        let thing_id = thing.upgrade()?.write().unwrap().get_id();
-        let remote = self.remotes.get(&thing_id);
+  fn generate(
+    &self,
+    thing: Weak<RwLock<Box<dyn Thing>>>,
+    name: String,
+    input: Option<&serde_json::Value>,
+  ) -> Option<Box<dyn Action>> {
+    let input = input.and_then(|v| v.as_object()).cloned();
+    let thing_id = thing.upgrade()?.write().unwrap().get_id();
+    let remote_name = self.remotes.get(&thing_id).cloned()?;
 
-        match name.as_ref() {
-          "move" => Some(Box::new(MoveAction::new(input, thing, self.sender.clone(), remote?.clone()))),
-          _ => None,
-        }
+    match name.as_ref() {
+      "move" => Some(Box::new(MoveAction::new(
+        input,
+        thing,
+        self.sender.clone(),
+        self.storage.clone(),
+        remote_name
+      ))),
+      _ => None,
     }
+  }
 }
 
 pub struct MoveAction<T, D> {
   action: BaseAction,
   sender: Arc<Mutex<Sender<T, D>>>,
-  remote: Arc<RwLock<Remote>>,
+  storage: Arc<RwLock<Storage>>,
+  remote_name: String,
 }
 
 impl<T, D> MoveAction<T, D> {
@@ -54,7 +62,8 @@ impl<T, D> MoveAction<T, D> {
         input: Option<serde_json::Map<String, serde_json::Value>>,
         thing: Weak<RwLock<Box<dyn Thing>>>,
         sender: Arc<Mutex<Sender<T, D>>>,
-        remote: Arc<RwLock<Remote>>,
+        storage: Arc<RwLock<Storage>>,
+        remote_name: String,
     ) -> Self {
         Self {
           action: BaseAction::new(
@@ -63,8 +72,9 @@ impl<T, D> MoveAction<T, D> {
             input,
             thing,
           ),
-          sender: sender.clone(),
-          remote: remote.clone(),
+          sender: sender,
+          storage: storage,
+          remote_name,
         }
     }
 }
@@ -73,7 +83,7 @@ impl<T, D, E> Action for MoveAction<T, D>
 where
   T: OutputPin<Error = E> + Send + 'static,
   D: DelayUs<u32, Error = E> + Send + 'static,
-  E: Debug,
+  E: Error + Send + Sync + 'static,
 {
     fn set_href_prefix(&mut self, prefix: String) {
       self.action.set_href_prefix(prefix)
@@ -131,7 +141,8 @@ where
       let id = self.get_id();
 
       let sender = self.sender.clone();
-      let remote = self.remote.clone();
+      let storage = self.storage.clone();
+      let remote_name = self.remote_name.clone();
 
       thread::spawn(move || {
         let thing = thing.clone();
@@ -147,9 +158,10 @@ where
           Ordering::Greater => Command::Up,
         };
 
-        let mut sender = sender.lock().unwrap();
-        let mut remote = remote.write().unwrap();
-        remote.send_repeat(&mut *sender, command, 2).unwrap();
+        storage.write().unwrap().with_remote(&remote_name, move |remote| {
+          let mut sender = sender.lock().unwrap();
+          remote.send_repeat(&mut *sender, command, 2)
+        });
 
         thing.set_property(
           "position".to_owned(),
