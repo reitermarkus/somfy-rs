@@ -21,6 +21,9 @@ use webthing::{Thing, ThingsType, WebThingServer};
 
 const TRANSMITTER_PIN: u8 = 4;
 
+
+const DEFAULT_CONFIG_FILE_PATH: &'static str = "./config.yaml";
+
 #[actix_rt::main]
 async fn main() -> Result<(), Box<dyn Error>> {
   env_logger::init();
@@ -71,10 +74,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     delay: Delay,
   };
 
-  let mut storage = value_t!(matches.value_of("config"), PathBuf)
-    .map(|path| Storage::new(path))
-    .unwrap_or_default();
-  storage.load()?;
+  let storage_path = value_t!(matches.value_of("config"), PathBuf)
+    .unwrap_or_else(|_| DEFAULT_CONFIG_FILE_PATH.into());
+  let mut storage = Storage::new(storage_path)?;
 
   let repetitions = value_t!(matches.value_of("repetitions"), usize).unwrap_or(0);
 

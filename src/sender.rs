@@ -1,5 +1,4 @@
 use core::fmt;
-use core::time::Duration;
 
 use embedded_hal::blocking::delay::DelayUs;
 use embedded_hal::digital::{
@@ -46,17 +45,19 @@ where
   /// Send a `Frame` with a given number of `repetitions`. The total number sent is
   /// `1 + repetitions`, i.e. `send_frame(…)` is the same as `send_frame_repeat(…, 0)`.
   pub fn send_frame_repeat(&mut self, frame: &Frame, repetitions: usize) -> Result<(), E> {
+    self.wake_up()?;
+
     self.send_frame_with_type(frame, SyncType::Once)?;
 
     for _ in 0..repetitions {
       self.send_frame_with_type(frame, SyncType::Repeat)?;
+      self.delay.try_delay_us(250_000)?;
     }
 
     Ok(())
   }
 
   fn send_frame_with_type(&mut self, frame: &Frame, sync_type: SyncType) -> Result<(), E> {
-    self.wake_up()?;
     self.hardware_sync(sync_type)?;
     self.software_sync()?;
 
@@ -68,8 +69,8 @@ where
   }
 
   fn wake_up(&mut self) -> Result<(), E> {
-    self.send_state(High, 9415)?;
-    self.send_state(Low, 89565)
+    self.send_state(High, 9_415)?;
+    self.send_state(Low, 89_565)
   }
 
   fn hardware_sync(&mut self, sync_type: SyncType) -> Result<(), E> {
@@ -87,22 +88,17 @@ where
   }
 
   fn software_sync(&mut self) -> Result<(), E> {
-    self.send_state(High, 4550)?;
+    self.send_state(High, 4_550)?;
     self.send_state(Low, SYMBOL_WIDTH / 2)
   }
 
   fn inter_frame_gap(&mut self) -> Result<(), E> {
-    self.send_state(Low, 30415)
+    self.send_state(Low, 30_415)
   }
 
   fn send_state(&mut self, state: PinState, time: u32) -> Result<(), E> {
     self.transmitter.try_set_state(state)?;
-
-    // TODO: https://github.com/golemparts/rppal/issues/40
-    // self.delay.try_delay_us(time)
-    spin_sleep::sleep(Duration::from_micros(time.into()));
-
-    Ok(())
+    self.delay.try_delay_us(time)
   }
 
   // Send a byte, starting with the most significant bit.
