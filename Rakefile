@@ -76,3 +76,8 @@ task :install => :build do
 end
 
 task :deploy => :install
+
+task :run => :deploy do
+  ssh 'killall', 'somfy' rescue nil
+  ssh 'env', 'RUST_LOG=info', 'somfy', '-s'
+end

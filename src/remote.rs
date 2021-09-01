@@ -5,7 +5,7 @@ use ux::u24;
 
 use super::*;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Remote {
   address: u24,
   rolling_code: u16,
@@ -27,18 +27,20 @@ impl Remote {
     self.rolling_code
   }
 
-  pub fn send<T, D, E>(&mut self, sender: &mut Sender<T, D>, command: Command) -> Result<(), E>
+  pub fn send<T, D, E, S, SE>(&mut self, sender: &mut Sender<T, D>, storage: &mut S, command: Command) -> Result<(), Error<E, SE>>
   where
     T: OutputPin<Error = E>,
     D: DelayUs<u32, Error = E>,
+    S: RollingCodeStorage<Error = SE>,
   {
-    self.send_repeat(sender, command, 0)
+    self.send_repeat(sender, storage, command, 0)
   }
 
-  pub fn send_repeat<T, D, E>(&mut self, sender: &mut Sender<T, D>, command: Command, repetitions: usize) -> Result<(), E>
+  pub fn send_repeat<T, D, E, S, SE>(&mut self, sender: &mut Sender<T, D>, storage: &mut S, command: Command, repetitions: usize) -> Result<(), Error<E, SE>>
   where
     T: OutputPin<Error = E>,
     D: DelayUs<u32, Error = E>,
+    S: RollingCodeStorage<Error = SE>,
   {
     let frame = Frame::builder()
       .key(0xA7)
@@ -50,6 +52,14 @@ impl Remote {
 
     self.rolling_code += 1;
 
-    sender.send_frame_repeat(&frame, repetitions)
+    if let Err(err) = storage.persist(&*self) {
+      return Err(Error::StorageError(err))
+    }
+
+    if let Err(err) = sender.send_frame_repeat(&frame, repetitions) {
+      return Err(Error::TransmitError(err))
+    }
+
+    Ok(())
   }
 }

@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::path::PathBuf;
 use std::process::exit;
+use std::sync::{Arc, Mutex, RwLock};
 
 use clap::{Arg, App, value_t};
 
@@ -14,9 +16,13 @@ use storage::Storage;
 #[cfg(feature = "server")]
 mod thing;
 
+#[cfg(feature = "server")]
+use webthing::{Thing, ThingsType, WebThingServer};
+
 const TRANSMITTER_PIN: u8 = 4;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[actix_rt::main]
+async fn main() -> Result<(), Box<dyn Error>> {
   env_logger::init();
 
   let matches = App::new("somfy")
@@ -47,20 +53,13 @@ fn main() -> Result<(), Box<dyn Error>> {
       .takes_value(true)
       .requires("command")
     )
+    .arg(Arg::with_name("server")
+      .short("s")
+      .long("server")
+      .help("Start API server")
+      .conflicts_with_all(&["remote", "command"])
+    )
     .get_matches();
-
-  let remote_name = matches.value_of("remote").unwrap();
-  let command = if let Some(command) = matches.value_of("command") {
-     Some(command.parse()?)
-  } else {
-    None
-  };
-  let repetitions = value_t!(matches.value_of("repetitions"), usize).unwrap_or(0);
-
-  let mut storage = value_t!(matches.value_of("config"), PathBuf)
-    .map(|path| Storage::new(path))
-    .unwrap_or_default();
-  storage.load()?;
 
   let gpio = Gpio::new()?;
 
@@ -72,14 +71,57 @@ fn main() -> Result<(), Box<dyn Error>> {
     delay: Delay,
   };
 
-  if let Some(command) = command {
-    let remote_result = storage.with_remote(&remote_name, |remote| {
-      log::info!("Sending command “{:?}” with remote “{}”.", command, remote_name);
-      remote.send_repeat(&mut sender, command, repetitions)
-    });
+  let mut storage = value_t!(matches.value_of("config"), PathBuf)
+    .map(|path| Storage::new(path))
+    .unwrap_or_default();
+  storage.load()?;
 
-    if let Some(remote_result) = remote_result {
-      remote_result?;
+  let repetitions = value_t!(matches.value_of("repetitions"), usize).unwrap_or(0);
+
+  #[cfg(feature = "server")]
+  if matches.is_present("server") {
+    let mut remotes = HashMap::new();
+
+    let mut things = Vec::<Arc<RwLock<Box<dyn Thing + 'static>>>>::new();
+
+    for (name, remote) in storage.remotes() {
+      let thing = thing::make_remote(name, remote);
+      remotes.insert(thing.get_id().clone(), Arc::new(RwLock::new(remote.clone())));
+      things.push(Arc::new(RwLock::new(Box::new(thing))));
+    }
+
+    let generator = thing::Generator {
+      sender: Arc::new(Mutex::new(sender)),
+      storage: Arc::new(RwLock::new(storage)),
+      remotes,
+    };
+
+    log::info!("Starting server.");
+    let mut server = WebThingServer::new(
+        ThingsType::Multiple(things, "Somfy RTS Blinds".to_owned()),
+        Some(8888),
+        None,
+        None,
+        Box::new(generator),
+        None,
+        Some(true),
+    );
+    server.start(None).await?;
+
+    return Ok(())
+  }
+
+  let remote_name = matches.value_of("remote").unwrap();
+  let command = if let Some(command) = matches.value_of("command") {
+    Some(command.parse()?)
+  } else {
+    None
+  };
+
+  if let Some(command) = command {
+    if let Some(remote) = storage.remote(&remote_name) {
+      log::info!("Sending command “{:?}” with remote “{}”.", command, remote_name);
+      remote.clone().send_repeat(&mut sender, &mut storage, command, repetitions)?;
     } else {
       eprintln!("No remote with name “{}” found.", remote_name);
       exit(1);

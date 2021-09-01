@@ -15,10 +15,10 @@ use uuid::Uuid;
 
 use crate::{Command, Remote, Sender, Storage};
 
-struct Generator<T, D> {
-  sender: Arc<Mutex<Sender<T, D>>>,
-  storage: Arc<RwLock<Storage>>,
-  remotes: HashMap<String, String>,
+pub struct Generator<T, D> {
+  pub sender: Arc<Mutex<Sender<T, D>>>,
+  pub storage: Arc<RwLock<Storage>>,
+  pub remotes: HashMap<String, Arc<RwLock<Remote>>>,
 }
 
 impl<T, D, E> ActionGenerator for Generator<T, D>
@@ -35,7 +35,9 @@ where
   ) -> Option<Box<dyn Action>> {
     let input = input.and_then(|v| v.as_object()).cloned();
     let thing_id = thing.upgrade()?.write().unwrap().get_id();
-    let remote_name = self.remotes.get(&thing_id).cloned()?;
+    let remote = self.remotes.get(&thing_id).cloned()?;
+
+    log::info!("Generating {} action for {}: {:?}", name, thing_id, input);
 
     match name.as_ref() {
       "move" => Some(Box::new(MoveAction::new(
@@ -43,7 +45,7 @@ where
         thing,
         self.sender.clone(),
         self.storage.clone(),
-        remote_name
+        remote,
       ))),
       _ => None,
     }
@@ -54,7 +56,7 @@ pub struct MoveAction<T, D> {
   action: BaseAction,
   sender: Arc<Mutex<Sender<T, D>>>,
   storage: Arc<RwLock<Storage>>,
-  remote_name: String,
+  remote: Arc<RwLock<Remote>>,
 }
 
 impl<T, D> MoveAction<T, D> {
@@ -63,7 +65,7 @@ impl<T, D> MoveAction<T, D> {
         thing: Weak<RwLock<Box<dyn Thing>>>,
         sender: Arc<Mutex<Sender<T, D>>>,
         storage: Arc<RwLock<Storage>>,
-        remote_name: String,
+        remote: Arc<RwLock<Remote>>,
     ) -> Self {
         Self {
           action: BaseAction::new(
@@ -74,7 +76,7 @@ impl<T, D> MoveAction<T, D> {
           ),
           sender: sender,
           storage: storage,
-          remote_name,
+          remote,
         }
     }
 }
@@ -130,19 +132,18 @@ where
     }
 
     fn perform_action(&mut self) {
-      let thing = self.get_thing();
-      if thing.is_none() {
-          return;
-      }
-
-      let thing = thing.unwrap();
+      let thing = if let Some(thing) = self.get_thing() {
+        thing
+      } else {
+        return
+      };
       let input = self.get_input().unwrap().clone();
       let name = self.get_name();
       let id = self.get_id();
 
       let sender = self.sender.clone();
       let storage = self.storage.clone();
-      let remote_name = self.remote_name.clone();
+      let remote = self.remote.clone();
 
       thread::spawn(move || {
         let thing = thing.clone();
@@ -152,16 +153,20 @@ where
         let target_position_value = input.get("position").unwrap();
         let target_position = target_position_value.as_u64().unwrap();
 
-        let command = match target_position.cmp(&current_position) {
-          Ordering::Less => Command::Down,
-          Ordering::Equal => return,
-          Ordering::Greater => Command::Up,
+        let command = match target_position {
+          0 => Command::Down,
+          100 => Command::Up,
+          p => match p.cmp(&current_position) {
+            Ordering::Less => Command::Down,
+            Ordering::Equal => return,
+            Ordering::Greater => Command::Up,
+          },
         };
 
-        storage.write().unwrap().with_remote(&remote_name, move |remote| {
-          let mut sender = sender.lock().unwrap();
-          remote.send_repeat(&mut *sender, command, 2)
-        });
+        let mut sender = sender.lock().unwrap();
+        let mut storage = storage.write().unwrap();
+        let mut remote = remote.write().unwrap();
+        remote.send_repeat(&mut sender, &mut *storage, command, 2);
 
         thing.set_property(
           "position".to_owned(),
@@ -181,7 +186,7 @@ where
     }
 }
 
-fn make_remote(name: &str, remote: &Remote) -> Arc<RwLock<Box<BaseThing>>> {
+pub fn make_remote(name: &str, remote: &Remote) -> BaseThing {
   let mut thing = BaseThing::new(
     format!("urn:dev:ops:somfy-rts-{}", remote.address()),
       name.to_owned(),
@@ -227,5 +232,5 @@ fn make_remote(name: &str, remote: &Remote) -> Arc<RwLock<Box<BaseThing>>> {
   let move_metadata = move_metadata.as_object().unwrap().clone();
   thing.add_available_action("move".to_owned(), move_metadata);
 
-  Arc::new(RwLock::new(Box::new(thing)))
+  thing
 }

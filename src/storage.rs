@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use std::error::Error;
+use std::collections::{BTreeMap, HashMap};
 use std::io;
 use std::fs::File;
 use std::str;
@@ -7,13 +6,14 @@ use std::path::{Path, PathBuf};
 
 use ux::u24;
 
-use somfy::Remote;
+use somfy::{Remote, RollingCodeStorage};
 
 const CONFIG_FILE_PATH: &'static str = "./config.yaml";
 
 #[derive(Debug)]
 pub struct Storage {
   path: PathBuf,
+  address_map: BTreeMap<u24, String>,
   remotes: HashMap<String, Remote>,
 }
 
@@ -25,29 +25,15 @@ impl Default for Storage {
 
 impl Storage {
   pub fn new(path: impl AsRef<Path>) -> Self {
-    Self { path: PathBuf::from(path.as_ref()), remotes: HashMap::new() }
+    Self { path: PathBuf::from(path.as_ref()), address_map: Default::default(), remotes: HashMap::new() }
   }
 
-  pub fn with_remote<C, T, E>(&mut self, name: &str, closure: C) -> Option<io::Result<T>>
-  where
-    E: Into<Box<dyn Error + Send + Sync>>,
-    C: FnOnce(&mut Remote) -> Result<T, E>,
-  {
-    if let Some(remote) = self.remotes.get_mut(name) {
-      let previous_rolling_code = remote.rolling_code();
+  pub fn remote(&self, name: &str) -> Option<&Remote> {
+    self.remotes.get(name)
+  }
 
-      let value = closure(remote);
-
-      if previous_rolling_code != remote.rolling_code() {
-        if let Err(err) = self.persist() {
-          return Some(Err(err))
-        }
-      }
-
-      return Some(value.map_err(|err| io::Error::new(io::ErrorKind::Other, err)))
-    }
-
-    None
+  pub fn remotes(&self) -> &HashMap<String, Remote> {
+    &self.remotes
   }
 
   #[allow(unused)]
@@ -60,26 +46,43 @@ impl Storage {
     self.remotes.remove(&name);
   }
 
-  pub fn persist(&self) -> io::Result<()> {
-    let mut file = File::create(&self.path)?;
-
-    if let Err(err) = serde_yaml::to_writer(&mut file, &self.remotes) {
-      return Err(io::Error::new(io::ErrorKind::Other, err))
-    }
-
-    Ok(())
-  }
-
   pub fn load(&mut self) -> io::Result<()> {
     let mut file = File::open(&self.path)?;
 
     match serde_yaml::from_reader(&mut file) {
       Ok(ok) => {
         self.remotes = ok;
+
+        self.address_map = self.remotes.iter().map(|(k, v)| {
+          (v.address(), k.to_owned())
+        }).collect();
+
         Ok(())
       },
       Err(err) => Err(io::Error::new(io::ErrorKind::Other, err)),
     }
+  }
+}
+
+impl RollingCodeStorage for Storage {
+  type Error = io::Error;
+
+  fn persist(&mut self, remote: &Remote) -> Result<(), Self::Error> {
+    log::info!("Persisting config for remote 0x{:2X}.", remote.address());
+
+    if let Some(remote_name) = self.address_map.get(&remote.address()) {
+      if let Some(old_remote) = self.remotes.get_mut(remote_name) {
+        *old_remote = remote.clone();
+
+        let mut file = File::create(&self.path)?;
+
+        if let Err(err) = serde_yaml::to_writer(&mut file, &self.remotes) {
+          return Err(io::Error::new(io::ErrorKind::Other, err))
+        }
+      }
+    }
+
+    Ok(())
   }
 }
 
