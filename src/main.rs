@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::path::PathBuf;
 use std::process::exit;
 
 use clap::{Arg, App, value_t};
@@ -19,6 +20,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     .arg(Arg::with_name("remote")
       .help("The remote name")
       .requires("command")
+    )
+    .arg(Arg::with_name("config")
+      .short("f")
+      .long("config")
+      .value_name("FILE")
+      .help("The path to the config file")
+      .takes_value(true)
     )
     .arg(Arg::with_name("command")
       .short("c")
@@ -46,7 +54,9 @@ fn main() -> Result<(), Box<dyn Error>> {
   };
   let repetitions = value_t!(matches.value_of("repetitions"), usize).unwrap_or(0);
 
-  let mut storage = Storage::default();
+  let mut storage = value_t!(matches.value_of("config"), PathBuf)
+    .map(|path| Storage::new(path))
+    .unwrap_or_default();
   storage.load()?;
 
   let gpio = Gpio::new()?;

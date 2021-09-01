@@ -3,7 +3,7 @@ use std::error::Error;
 use std::io;
 use std::fs::File;
 use std::str;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use ux::u24;
 
@@ -19,11 +19,15 @@ pub struct Storage {
 
 impl Default for Storage {
   fn default() -> Self {
-    Self { path: PathBuf::from(CONFIG_FILE_PATH), remotes: HashMap::new() }
+    Self::new(CONFIG_FILE_PATH)
   }
 }
 
 impl Storage {
+  pub fn new(path: impl AsRef<Path>) -> Self {
+    Self { path: PathBuf::from(path.as_ref()), remotes: HashMap::new() }
+  }
+
   pub fn with_remote<C, T, E>(&mut self, name: &str, closure: C) -> Option<io::Result<T>>
   where
     E: Into<Box<dyn Error + Send + Sync>>,
