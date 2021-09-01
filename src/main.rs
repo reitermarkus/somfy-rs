@@ -11,6 +11,9 @@ use somfy::*;
 mod storage;
 use storage::Storage;
 
+#[cfg(feature = "server")]
+mod thing;
+
 const TRANSMITTER_PIN: u8 = 4;
 
 fn main() -> Result<(), Box<dyn Error>> {

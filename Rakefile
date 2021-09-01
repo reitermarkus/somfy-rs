@@ -12,7 +12,7 @@ end
 
 desc 'compile binary'
 task :build do
-  sh 'cross', 'build', '--release', '--target', TARGET
+  sh 'cross', 'build', '--release', '--all-features', '--target', TARGET
 end
 
 desc 'set time zone on Raspberry Pi'
