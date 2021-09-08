@@ -155,7 +155,7 @@ where
 
       let command = match target_position {
         0 => Command::Down,
-        50 => Command::My,
+        45..=55 => Command::My,
         100 => Command::Up,
         p => match p.cmp(&current_position) {
           Ordering::Less => Command::Down,
@@ -167,7 +167,9 @@ where
       let mut sender = sender.lock().unwrap();
       let mut storage = storage.write().unwrap();
       let mut remote = remote.write().unwrap();
-      remote.send_repeat(&mut sender, &mut *storage, command, 3);
+
+      log::info!("Sending command {:?} with remote {}.", command, remote.address());
+      remote.send_repeat(&mut sender, &mut *storage, command, 2);
 
       thing.set_property(
         "position".to_owned(),
@@ -179,11 +181,11 @@ where
   }
 
   fn cancel(&mut self) {
-      self.action.cancel()
+    self.action.cancel()
   }
 
   fn finish(&mut self) {
-      self.action.finish()
+    self.action.finish()
   }
 }
 

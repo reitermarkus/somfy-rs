@@ -75,7 +75,29 @@ task :install => :build do
   sh 'rsync', '-z', '--rsync-path', 'sudo rsync', "target/#{TARGET}/release/somfy", "#{HOST}:/usr/local/bin/somfy"
 end
 
-task :deploy => :install
+task :deploy => :install do
+  r, w = IO.pipe
+
+  w.write <<~CFG
+    [Unit]
+    Description=somfy
+
+    [Service]
+    Type=simple
+    Environment=RUST_LOG=info
+    ExecStart=/usr/local/bin/somfy
+    Restart=always
+    RestartSec=1
+
+    [Install]
+    WantedBy=multi-user.target
+  CFG
+  w.close
+
+  sh 'ssh', HOST, 'sudo', 'tee', '/etc/systemd/system/somfy.service', in: r
+  sh 'ssh', HOST, 'sudo', 'systemctl', 'enable', 'somfy'
+  sh 'ssh', HOST, 'sudo', 'systemctl', 'restart', 'somfy'
+end
 
 task :run => :deploy do
   ssh 'killall', 'somfy' rescue nil

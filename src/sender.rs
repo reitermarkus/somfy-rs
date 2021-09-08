@@ -51,7 +51,6 @@ where
 
     for _ in 0..repetitions {
       self.send_frame_with_type(frame, SyncType::Repeat)?;
-      self.delay.try_delay_us(250_000)?;
     }
 
     Ok(())
