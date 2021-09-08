@@ -71,11 +71,12 @@ end
 
 task :setup => [:setup_timezone, :setup_hostname, :setup_watchdog]
 
+desc 'deploy binary to Raspberry Pi'
 task :install => :build do
   sh 'rsync', '-z', '--rsync-path', 'sudo rsync', "target/#{TARGET}/release/somfy", "#{HOST}:/usr/local/bin/somfy"
 end
 
-desc 'deploy binary and service configuration to Raspberry Pi'
+desc 'deploy service configuration to Raspberry Pi'
 task :deploy => :install do
   r, w = IO.pipe
 
