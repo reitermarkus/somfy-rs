@@ -75,6 +75,7 @@ task :install => :build do
   sh 'rsync', '-z', '--rsync-path', 'sudo rsync', "target/#{TARGET}/release/somfy", "#{HOST}:/usr/local/bin/somfy"
 end
 
+desc 'deploy binary and service configuration to Raspberry Pi'
 task :deploy => :install do
   r, w = IO.pipe
 
@@ -97,6 +98,11 @@ task :deploy => :install do
   sh 'ssh', HOST, 'sudo', 'tee', '/etc/systemd/system/somfy.service', in: r
   sh 'ssh', HOST, 'sudo', 'systemctl', 'enable', 'somfy'
   sh 'ssh', HOST, 'sudo', 'systemctl', 'restart', 'somfy'
+end
+
+desc 'show service log'
+task :log do
+  sh 'ssh', HOST, '-t', 'journalctl', '-f', '-u', 'cistern'
 end
 
 task :run => :deploy do
