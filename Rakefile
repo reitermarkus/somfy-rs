@@ -86,7 +86,7 @@ task :deploy => :install do
     [Service]
     Type=simple
     Environment=RUST_LOG=info
-    ExecStart=/usr/local/bin/somfy
+    ExecStart=/usr/local/bin/somfy --config /home/pi/config.yaml --server
     Restart=always
     RestartSec=1
 
@@ -102,7 +102,7 @@ end
 
 desc 'show service log'
 task :log do
-  sh 'ssh', HOST, '-t', 'journalctl', '-f', '-u', 'cistern'
+  sh 'ssh', HOST, '-t', 'journalctl', '-f', '-u', 'somfy'
 end
 
 task :run => :deploy do
