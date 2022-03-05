@@ -74,7 +74,9 @@ impl RollingCodeStorage for Storage {
 
 #[test]
 fn test_storage() {
-  let mut s = Storage::default();
+  let dir = tempfile::tempdir().unwrap();
+
+  let mut s = Storage::new(dir.path().join("config.yaml"));
 
   s.add_remote(String::from("Remote A"), u24::new(0xAA), 0xA7);
   s.add_remote(String::from("Remote B"), u24::new(0xAF), 0xA7);

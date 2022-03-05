@@ -20,3 +20,6 @@ actix-rt = "1.1.0"
 
 [features]
 server = ["webthing", "uuid", "serde_json"]
+
+[dev-dependencies]
+tempfile = "3.3.0"
