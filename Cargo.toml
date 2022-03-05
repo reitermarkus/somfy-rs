@@ -6,7 +6,7 @@ edition = "2018"
 [dependencies]
 ux = { package = "ux_serde", version = "0.2.0", features = ["serde"] }
 embedded-hal = "1.0.0-alpha.7"
-rppal = { version = "0.13", features = ["hal"], git = "https://github.com/reitermarkus/rppal", branch = "hal" }
+rppal = { version = "0.13", features = ["hal"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 clap = "2.33.3"
@@ -23,3 +23,6 @@ server = ["webthing", "uuid", "serde_json"]
 
 [dev-dependencies]
 tempfile = "3.3.0"
+
+[patch.crates-io]
+rppal = { git = "https://github.com/reitermarkus/rppal", branch = "hal" }
