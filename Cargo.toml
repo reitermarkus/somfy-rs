@@ -9,7 +9,7 @@ embedded-hal = "1.0.0-alpha.7"
 rppal = { version = "0.13", features = ["hal"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
-clap = "2.33.3"
+clap = "2.34.0"
 log = "0.4.14"
 env_logger = "0.8.4"
 spin_sleep = "1.0.0"
