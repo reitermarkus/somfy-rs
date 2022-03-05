@@ -2,7 +2,7 @@ use std::error::Error;
 use std::path::PathBuf;
 use std::process::exit;
 
-use clap::{Arg, Command, value_t};
+use clap::{Arg, ArgMatches, Command};
 
 use rppal::{gpio::Gpio, hal::Delay};
 
@@ -72,11 +72,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     delay: Delay,
   };
 
-  let storage_path = value_t!(matches.value_of("config"), PathBuf)
+  let storage_path: PathBuf = matches.value_of_("config")
     .unwrap_or_else(|_| DEFAULT_CONFIG_FILE_PATH.into());
   let mut storage = Storage::new(storage_path)?;
 
-  let repetitions = value_t!(matches.value_of("repetitions"), usize).unwrap_or(0);
+  let repetitions: usize = matches.value_of_t("repetitions").unwrap_or(0);
 
   #[cfg(feature = "server")]
   if matches.is_present("server") {
