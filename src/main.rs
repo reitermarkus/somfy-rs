@@ -20,7 +20,7 @@ use webthing::{Thing, ThingsType, WebThingServer};
 const TRANSMITTER_PIN: u8 = 4;
 
 
-const DEFAULT_CONFIG_FILE_PATH: &'static str = "./config.yaml";
+const DEFAULT_CONFIG_FILE_PATH: &str = "./config.yaml";
 
 #[actix_rt::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -122,7 +122,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
   };
 
   if let Some(command) = command {
-    if let Some(remote) = storage.remote(&remote_name) {
+    if let Some(remote) = storage.remote(remote_name) {
       log::info!("Sending command “{:?}” with remote “{}”.", command, remote_name);
       remote.clone().send_repeat(&mut sender, &mut storage, command, repetitions)?;
     } else {
