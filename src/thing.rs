@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::thread;
 
-use embedded_hal::blocking::delay::DelayUs;
-use embedded_hal::digital::OutputPin;
+use embedded_hal::delay::blocking::DelayUs;
+use embedded_hal::digital::blocking::OutputPin;
 use serde_json::json;
 use webthing::{Action, BaseAction, BaseThing, BaseProperty, Thing};
 use webthing::server::ActionGenerator;
@@ -24,7 +24,7 @@ pub struct Generator<T, D> {
 impl<T, D, E> ActionGenerator for Generator<T, D>
 where
   T: OutputPin<Error = E> + Send + 'static,
-  D: DelayUs<u32, Error = E> + Send + 'static,
+  D: DelayUs<Error = E> + Send + 'static,
   E: Error + Send + Sync + 'static,
 {
   fn generate(
@@ -84,7 +84,7 @@ impl<T, D> MoveAction<T, D> {
 impl<T, D, E> Action for MoveAction<T, D>
 where
   T: OutputPin<Error = E> + Send + 'static,
-  D: DelayUs<u32, Error = E> + Send + 'static,
+  D: DelayUs<Error = E> + Send + 'static,
   E: Error + Send + Sync + 'static,
 {
   fn set_href_prefix(&mut self, prefix: String) {
