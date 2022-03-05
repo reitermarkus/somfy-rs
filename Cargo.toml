@@ -16,7 +16,7 @@ spin_sleep = "1.0.0"
 webthing = { version = "0.14.0", optional = true }
 uuid = { version = "0.8.2", optional = true }
 serde_json = { version = "1.0.79", optional = true }
-actix-rt = "1.1.0"
+actix-rt = "1.1.1"
 
 [features]
 server = ["webthing", "uuid", "serde_json"]
