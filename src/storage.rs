@@ -74,6 +74,8 @@ impl RollingCodeStorage for Storage {
 
 #[cfg(test)]
 mod tests {
+  use super::*;
+
   #[test]
   #[ignore]
   fn test_storage() {
