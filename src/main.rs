@@ -1,8 +1,6 @@
-use std::collections::HashMap;
 use std::error::Error;
 use std::path::PathBuf;
 use std::process::exit;
-use std::sync::{Arc, Mutex, RwLock};
 
 use clap::{Arg, App, value_t};
 
@@ -82,6 +80,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   #[cfg(feature = "server")]
   if matches.is_present("server") {
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex, RwLock};
+
     let mut remotes = HashMap::new();
 
     let mut things = Vec::<Arc<RwLock<Box<dyn Thing + 'static>>>>::new();

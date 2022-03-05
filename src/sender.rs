@@ -1,8 +1,8 @@
 use core::fmt;
 
-use embedded_hal::blocking::delay::DelayUs;
+use embedded_hal::delay::blocking::DelayUs;
 use embedded_hal::digital::{
-  OutputPin,
+  blocking::OutputPin,
   PinState::{self, *},
 };
 
@@ -35,7 +35,7 @@ where
 impl<T, D, E> Sender<T, D>
 where
   T: OutputPin<Error = E>,
-  D: DelayUs<u32, Error = E>,
+  D: DelayUs<Error = E>,
 {
   /// Send a `Frame` once.
   pub fn send_frame(&mut self, frame: &Frame) -> Result<(), E> {
@@ -96,8 +96,8 @@ where
   }
 
   fn send_state(&mut self, state: PinState, time: u32) -> Result<(), E> {
-    self.transmitter.try_set_state(state)?;
-    self.delay.try_delay_us(time)
+    self.transmitter.set_state(state)?;
+    self.delay.delay_us(time)
   }
 
   // Send a byte, starting with the most significant bit.

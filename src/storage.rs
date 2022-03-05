@@ -39,6 +39,7 @@ impl Storage {
     self.remotes.get(name)
   }
 
+  #[allow(unused)]
   pub fn remotes(&self) -> &BTreeMap<String, Remote> {
     &self.remotes
   }

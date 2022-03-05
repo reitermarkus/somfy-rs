@@ -1,5 +1,5 @@
-use embedded_hal::digital::OutputPin;
-use embedded_hal::blocking::delay::DelayUs;
+use embedded_hal::digital::blocking::OutputPin;
+use embedded_hal::delay::blocking::DelayUs;
 use serde::{Serialize, Deserialize};
 use ux::u24;
 
@@ -30,7 +30,7 @@ impl Remote {
   pub fn send<T, D, E, S, SE>(&mut self, sender: &mut Sender<T, D>, storage: &mut S, command: Command) -> Result<(), Error<E, SE>>
   where
     T: OutputPin<Error = E>,
-    D: DelayUs<u32, Error = E>,
+    D: DelayUs<Error = E>,
     S: RollingCodeStorage<Error = SE>,
   {
     self.send_repeat(sender, storage, command, 0)
@@ -39,7 +39,7 @@ impl Remote {
   pub fn send_repeat<T, D, E, S, SE>(&mut self, sender: &mut Sender<T, D>, storage: &mut S, command: Command, repetitions: usize) -> Result<(), Error<E, SE>>
   where
     T: OutputPin<Error = E>,
-    D: DelayUs<u32, Error = E>,
+    D: DelayUs<Error = E>,
     S: RollingCodeStorage<Error = SE>,
   {
     let frame = Frame::builder()
