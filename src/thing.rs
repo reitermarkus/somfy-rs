@@ -13,7 +13,8 @@ use webthing::{Action, BaseAction, BaseThing, BaseProperty, Thing};
 use webthing::server::ActionGenerator;
 use uuid::Uuid;
 
-use crate::{Command, Remote, Sender, Storage};
+use somfy::{Command, Remote, Sender};
+use crate::{Storage};
 
 pub struct Generator<T, D> {
   pub sender: Arc<Mutex<Sender<T, D>>>,
