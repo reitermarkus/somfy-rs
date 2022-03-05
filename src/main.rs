@@ -2,7 +2,7 @@ use std::error::Error;
 use std::path::PathBuf;
 use std::process::exit;
 
-use clap::{Arg, App, value_t};
+use clap::{Arg, Command, value_t};
 
 use rppal::{gpio::Gpio, hal::Delay};
 
@@ -26,36 +26,36 @@ const DEFAULT_CONFIG_FILE_PATH: &str = "./config.yaml";
 async fn main() -> Result<(), Box<dyn Error>> {
   env_logger::init();
 
-  let matches = App::new("somfy")
-    .arg(Arg::with_name("remote")
+  let matches = Command::new("somfy")
+    .arg(Arg::new("remote")
       .help("The remote name")
       .requires("command")
     )
-    .arg(Arg::with_name("config")
-      .short("f")
+    .arg(Arg::new("config")
+      .short('f')
       .long("config")
       .value_name("FILE")
       .help("The path to the config file")
       .takes_value(true)
     )
-    .arg(Arg::with_name("command")
-      .short("c")
+    .arg(Arg::new("command")
+      .short('c')
       .long("command")
       .value_name("COMMAND")
       .help("The remote command to send")
       .takes_value(true)
       .requires("remote")
     )
-    .arg(Arg::with_name("repetitions")
-      .short("r")
+    .arg(Arg::new("repetitions")
+      .short('r')
       .long("repeat")
       .value_name("REPETITIONS")
       .help("Number of command repetitions")
       .takes_value(true)
       .requires("command")
     )
-    .arg(Arg::with_name("server")
-      .short("s")
+    .arg(Arg::new("server")
+      .short('s')
       .long("server")
       .help("Start API server")
       .conflicts_with_all(&["remote", "command"])
