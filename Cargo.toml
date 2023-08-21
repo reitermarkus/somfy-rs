@@ -8,7 +8,7 @@ ux = { package = "ux_serde", version = "0.2.0", features = ["serde"] }
 embedded-hal = "1.0.0-alpha.7"
 rppal = { version = "0.13", features = ["hal"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"
+serde_yaml = "0.9"
 clap = "3.1.5"
 log = "0.4.14"
 env_logger = "0.9.0"
