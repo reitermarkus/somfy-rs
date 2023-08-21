@@ -1,9 +1,11 @@
 use core::fmt;
 
-use embedded_hal::delay::blocking::DelayUs;
-use embedded_hal::digital::{
-  blocking::OutputPin,
-  PinState::{self, *},
+use embedded_hal::{
+  delay::blocking::DelayUs,
+  digital::{
+    blocking::OutputPin,
+    PinState::{self, *},
+  },
 };
 
 use super::*;
@@ -26,9 +28,7 @@ where
   T: fmt::Debug,
 {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    f.debug_struct("Sender")
-      .field("transmitter", &self.transmitter)
-      .finish()
+    f.debug_struct("Sender").field("transmitter", &self.transmitter).finish()
   }
 }
 
@@ -111,11 +111,7 @@ where
 
   // Send a single bit, using Manchester encoding.
   fn send_bit(&mut self, bit: bool) -> Result<(), E> {
-    let (from, to) = if bit {
-      (Low, High)
-    } else {
-      (High, Low)
-    };
+    let (from, to) = if bit { (Low, High) } else { (High, Low) };
 
     self.send_state(from, SYMBOL_WIDTH / 2)?;
     self.send_state(to, SYMBOL_WIDTH / 2)

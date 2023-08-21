@@ -1,8 +1,10 @@
-use std::collections::BTreeMap;
-use std::io;
-use std::fs::File;
-use std::str;
-use std::path::{Path, PathBuf};
+use std::{
+  collections::BTreeMap,
+  fs::File,
+  io,
+  path::{Path, PathBuf},
+  str,
+};
 
 use ux::u24;
 
@@ -21,15 +23,9 @@ impl Storage {
 
     match serde_yaml::from_reader::<_, BTreeMap<String, Remote>>(&mut file) {
       Ok(remotes) => {
-        let address_map = remotes.iter().map(|(k, v)| {
-          (v.address(), k.to_owned())
-        }).collect();
+        let address_map = remotes.iter().map(|(k, v)| (v.address(), k.to_owned())).collect();
 
-        Ok(Self {
-          path: path.as_ref().into(),
-          address_map,
-          remotes,
-        })
+        Ok(Self { path: path.as_ref().into(), address_map, remotes })
       },
       Err(err) => Err(io::Error::new(io::ErrorKind::Other, err)),
     }
@@ -65,10 +61,7 @@ impl RollingCodeStorage for Storage {
       }
     }
 
-    Err(io::Error::new(
-      io::ErrorKind::NotFound,
-      format!("No entry found for remote {}.", remote.address())
-    ))
+    Err(io::Error::new(io::ErrorKind::NotFound, format!("No entry found for remote {}.", remote.address())))
   }
 }
 

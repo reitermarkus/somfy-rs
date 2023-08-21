@@ -1,20 +1,20 @@
 #![cfg(feature = "server")]
 
-use std::cmp::Ordering;
-use std::error::Error;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock, Weak};
-use std::thread;
+use std::{
+  cmp::Ordering,
+  collections::HashMap,
+  error::Error,
+  sync::{Arc, Mutex, RwLock, Weak},
+  thread,
+};
 
-use embedded_hal::delay::blocking::DelayUs;
-use embedded_hal::digital::blocking::OutputPin;
+use embedded_hal::{delay::blocking::DelayUs, digital::blocking::OutputPin};
 use serde_json::json;
-use webthing::{Action, BaseAction, BaseThing, BaseProperty, Thing};
-use webthing::server::ActionGenerator;
 use uuid::Uuid;
+use webthing::{server::ActionGenerator, Action, BaseAction, BaseProperty, BaseThing, Thing};
 
+use crate::Storage;
 use somfy::{Command, Remote, Sender};
-use crate::{Storage};
 
 pub struct Generator<T, D> {
   pub sender: Arc<Mutex<Sender<T, D>>>,
@@ -41,13 +41,7 @@ where
     log::info!("Generating {} action for {}: {:?}", name, thing_id, input);
 
     match name.as_ref() {
-      "move" => Some(Box::new(MoveAction::new(
-        input,
-        thing,
-        self.sender.clone(),
-        self.storage.clone(),
-        remote,
-      ))),
+      "move" => Some(Box::new(MoveAction::new(input, thing, self.sender.clone(), self.storage.clone(), remote))),
       _ => None,
     }
   }
@@ -69,12 +63,7 @@ impl<T, D> MoveAction<T, D> {
     remote: Arc<RwLock<Remote>>,
   ) -> Self {
     Self {
-      action: BaseAction::new(
-        Uuid::new_v4().to_string(),
-        "move".to_owned(),
-        input,
-        thing,
-      ),
+      action: BaseAction::new(Uuid::new_v4().to_string(), "move".to_owned(), input, thing),
       sender: sender,
       storage: storage,
       remote,
@@ -133,11 +122,7 @@ where
   }
 
   fn perform_action(&mut self) {
-    let thing = if let Some(thing) = self.get_thing() {
-      thing
-    } else {
-      return
-    };
+    let thing = if let Some(thing) = self.get_thing() { thing } else { return };
     let input = self.get_input().unwrap().clone();
     let name = self.get_name();
     let id = self.get_id();
@@ -172,10 +157,7 @@ where
       log::info!("Sending command {:?} with remote {}.", command, remote.address());
       remote.send_repeat(&mut sender, &mut *storage, command, 2);
 
-      thing.set_property(
-        "position".to_owned(),
-        target_position_value.clone(),
-      ).unwrap();
+      thing.set_property("position".to_owned(), target_position_value.clone()).unwrap();
 
       thing.finish_action(name, id);
     });
@@ -208,12 +190,7 @@ pub fn make_remote(name: &str, remote: &Remote) -> BaseThing {
     "unit": "percent"
   });
   let position_description = position_description.as_object().unwrap().clone();
-  thing.add_property(Box::new(BaseProperty::new(
-    "position".to_owned(),
-    json!(50),
-    None,
-    Some(position_description),
-  )));
+  thing.add_property(Box::new(BaseProperty::new("position".to_owned(), json!(50), None, Some(position_description))));
 
   let move_metadata = json!({
     "title": "Move",

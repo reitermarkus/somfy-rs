@@ -1,5 +1,4 @@
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use ux::u24;
 
@@ -141,21 +140,21 @@ impl Frame {
   // Obfuscate the message by XOR'ing all bytes.
   fn obfuscate(&mut self) {
     self.command_and_checksum ^= self.key;
-    self.rolling_code[0]      ^= self.command_and_checksum;
-    self.rolling_code[1]      ^= self.rolling_code[0];
-    self.remote_address[0]    ^= self.rolling_code[1];
-    self.remote_address[1]    ^= self.remote_address[0];
-    self.remote_address[2]    ^= self.remote_address[1];
+    self.rolling_code[0] ^= self.command_and_checksum;
+    self.rolling_code[1] ^= self.rolling_code[0];
+    self.remote_address[0] ^= self.rolling_code[1];
+    self.remote_address[1] ^= self.remote_address[0];
+    self.remote_address[2] ^= self.remote_address[1];
   }
 
   // Deobfuscate the message by XOR'ing all bytes in reverse order.
   #[cfg(test)]
   fn deobfuscate(&mut self) {
-    self.remote_address[2]    ^= self.remote_address[1];
-    self.remote_address[1]    ^= self.remote_address[0];
-    self.remote_address[0]    ^= self.rolling_code[1];
-    self.rolling_code[1]      ^= self.rolling_code[0];
-    self.rolling_code[0]      ^= self.command_and_checksum;
+    self.remote_address[2] ^= self.remote_address[1];
+    self.remote_address[1] ^= self.remote_address[0];
+    self.remote_address[0] ^= self.rolling_code[1];
+    self.rolling_code[1] ^= self.rolling_code[0];
+    self.rolling_code[0] ^= self.command_and_checksum;
     self.command_and_checksum ^= self.key;
   }
 }
@@ -201,22 +200,22 @@ impl FrameBuilder {
     let remote_address = [remote_address[0], remote_address[1], remote_address[2]];
 
     // Calculate the checksum by XOR'ing all nibbles.
-    let checksum = (
-      key               >> 4 ^ key ^
-      command           >> 4 ^
-      rolling_code[0]   >> 4 ^ rolling_code[0] ^
-      rolling_code[1]   >> 4 ^ rolling_code[1] ^
-      remote_address[0] >> 4 ^ remote_address[0] ^
-      remote_address[1] >> 4 ^ remote_address[1] ^
-      remote_address[2] >> 4 ^ remote_address[2]
-    ) & 0b1111;
+    let checksum = (key >> 4
+      ^ key
+      ^ command >> 4
+      ^ rolling_code[0] >> 4
+      ^ rolling_code[0]
+      ^ rolling_code[1] >> 4
+      ^ rolling_code[1]
+      ^ remote_address[0] >> 4
+      ^ remote_address[0]
+      ^ remote_address[1] >> 4
+      ^ remote_address[1]
+      ^ remote_address[2] >> 4
+      ^ remote_address[2])
+      & 0b1111;
 
-    let mut frame = Frame {
-      key,
-      command_and_checksum: command | checksum,
-      rolling_code,
-      remote_address,
-    };
+    let mut frame = Frame { key, command_and_checksum: command | checksum, rolling_code, remote_address };
     frame.obfuscate();
 
     Some(frame)
@@ -248,7 +247,7 @@ mod tests {
 
     frame.deobfuscate();
 
-    let command  = frame.command_and_checksum & 0b11110000;
+    let command = frame.command_and_checksum & 0b11110000;
     let checksum = frame.command_and_checksum & 0b00001111;
 
     assert_eq!(frame.key, 0xA7);
@@ -256,7 +255,11 @@ mod tests {
     assert_eq!(checksum, 7);
     assert_eq!(u16::from_be_bytes(frame.rolling_code), rolling_code);
     assert_eq!(
-      u24::new(frame.remote_address[0] as u32 + ((frame.remote_address[1] as u32) << 8) + ((frame.remote_address[2] as u32) << 16)),
+      u24::new(
+        frame.remote_address[0] as u32
+          + ((frame.remote_address[1] as u32) << 8)
+          + ((frame.remote_address[2] as u32) << 16)
+      ),
       remote_address
     );
   }
