@@ -13,6 +13,12 @@
       vars:
         timezone: Europe/Vienna
         watchdog: on
+    - name: Set core frequency
+      include_role:
+        name: infothrill.rpi_boot_config
+      vars:
+        boot_config:
+          core_freq: '250'
     - name: Build program
       local_action: command cargo install --bin somfy --features=server --path . --root target
       become: no
