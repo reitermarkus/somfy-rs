@@ -154,10 +154,15 @@ where
       let mut storage = storage.write().unwrap();
       let mut remote = remote.write().unwrap();
 
-      log::info!("Sending command {:?} with remote {}.", command, remote.address());
-      remote.send_repeat(&mut sender, &mut *storage, command, 2);
-
-      thing.set_property("position".to_owned(), target_position_value.clone()).unwrap();
+      log::info!("Sending command {command:?} with remote {}.", remote.address());
+      match remote.send_repeat(&mut sender, &mut *storage, command, 2) {
+        Ok(()) => {
+          thing.set_property("position".to_owned(), target_position_value.clone()).unwrap();
+        },
+        Err(err) => {
+          log::error!("Failed to send command {command:?}: {err}");
+        },
+      }
 
       thing.finish_action(name, id);
     });

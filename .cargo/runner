@@ -2,12 +2,14 @@
 
 set -euo pipefail
 
+local_path="${1}"
+shift
 user="$(yq e '.all.hosts[].ansible_user' inventory.yml)"
 host="$(yq e '.all.hosts[].ansible_host' inventory.yml)"
 ssh_host="${user}@${host}"
-binary_name="$(basename "${1}")"
+binary_name="$(basename "${local_path}")"
 remote_path="/tmp/${binary_name}"
 
-scp "${1}" "${ssh_host}:${remote_path}"
+scp "${local_path}" "${ssh_host}:${remote_path}"
 ssh "${ssh_host}" "sudo systemctl stop '${binary_name}'"
-ssh -t "${ssh_host}" "sudo RUST_LOG='${RUST_LOG-}' '${remote_path}'"
+ssh -t "${ssh_host}" "sudo RUST_LOG='${RUST_LOG-}' '${remote_path}' ${@}"

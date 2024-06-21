@@ -43,7 +43,7 @@
           Type=simple
           Environment=RUST_LOG=info
           Environment=PORT=8888
-          ExecStart=/usr/local/bin/somfy --config /home/pi/config.yaml --server
+          ExecStart=/usr/local/bin/somfy server --config /home/pi/config.yaml
           Restart=always
           RestartSec=1
 
