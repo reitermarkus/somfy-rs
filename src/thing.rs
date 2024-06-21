@@ -8,7 +8,7 @@ use std::{
   thread,
 };
 
-use embedded_hal::{delay::blocking::DelayUs, digital::blocking::OutputPin};
+use embedded_hal::{delay::DelayNs, digital::OutputPin};
 use serde_json::json;
 use uuid::Uuid;
 use webthing::{server::ActionGenerator, Action, BaseAction, BaseProperty, BaseThing, Thing};
@@ -25,7 +25,7 @@ pub struct Generator<T, D> {
 impl<T, D, E> ActionGenerator for Generator<T, D>
 where
   T: OutputPin<Error = E> + Send + 'static,
-  D: DelayUs<Error = E> + Send + 'static,
+  D: DelayNs + Send + 'static,
   E: Error + Send + Sync + 'static,
 {
   fn generate(
@@ -74,7 +74,7 @@ impl<T, D> MoveAction<T, D> {
 impl<T, D, E> Action for MoveAction<T, D>
 where
   T: OutputPin<Error = E> + Send + 'static,
-  D: DelayUs<Error = E> + Send + 'static,
+  D: DelayNs + Send + 'static,
   E: Error + Send + Sync + 'static,
 {
   fn set_href_prefix(&mut self, prefix: String) {

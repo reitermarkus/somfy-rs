@@ -1,4 +1,4 @@
-use embedded_hal::{delay::blocking::DelayUs, digital::blocking::OutputPin};
+use embedded_hal::{delay::DelayNs, digital::OutputPin};
 use serde::{Deserialize, Serialize};
 use ux::u24;
 
@@ -31,7 +31,7 @@ impl Remote {
   ) -> Result<(), Error<E, SE>>
   where
     T: OutputPin<Error = E>,
-    D: DelayUs<Error = E>,
+    D: DelayNs,
     S: RollingCodeStorage<Error = SE>,
   {
     self.send_repeat(sender, storage, command, 0)
@@ -46,7 +46,7 @@ impl Remote {
   ) -> Result<(), Error<E, SE>>
   where
     T: OutputPin<Error = E>,
-    D: DelayUs<Error = E>,
+    D: DelayNs,
     S: RollingCodeStorage<Error = SE>,
   {
     let frame = Frame::builder()

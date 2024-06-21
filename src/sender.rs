@@ -1,14 +1,14 @@
 use core::fmt;
 
 use embedded_hal::{
-  delay::blocking::DelayUs,
+  delay::DelayNs,
   digital::{
-    blocking::OutputPin,
+    OutputPin,
     PinState::{self, *},
   },
 };
 
-use super::*;
+use crate::Frame;
 
 const SYMBOL_WIDTH: u32 = 1280;
 
@@ -35,7 +35,7 @@ where
 impl<T, D, E> Sender<T, D>
 where
   T: OutputPin<Error = E>,
-  D: DelayUs<Error = E>,
+  D: DelayNs,
 {
   /// Send a `Frame` once.
   pub fn send_frame(&mut self, frame: &Frame) -> Result<(), E> {
@@ -97,7 +97,8 @@ where
 
   fn send_state(&mut self, state: PinState, time: u32) -> Result<(), E> {
     self.transmitter.set_state(state)?;
-    self.delay.delay_us(time)
+    self.delay.delay_us(time);
+    Ok(())
   }
 
   // Send a byte, starting with the most significant bit.
