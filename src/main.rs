@@ -1,6 +1,6 @@
 use std::{error::Error, path::PathBuf, process::exit};
 
-use clap::{value_parser, Arg, ArgAction, Command};
+use clap::{arg, value_parser, ArgAction, Command};
 
 use rppal::{gpio::Gpio, hal::Delay};
 
@@ -25,11 +25,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
   let matches = Command::new("somfy")
     .arg(
-      Arg::new("config")
-        .short('f')
-        .long("config")
-        .value_name("FILE")
-        .help("Path to the config file")
+      arg!(-f --config <FILE> "Path to the config file")
         .num_args(1)
         .default_value(DEFAULT_CONFIG_FILE_PATH)
         .action(ArgAction::Set)
@@ -39,15 +35,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
       |command| {
         Command::new(command)
           .about(format!("Send the {command} command"))
-          .arg(Arg::new("remote").help("The remote name").requires("command").num_args(1).action(ArgAction::Set))
+          .arg(arg!(<remote> "The remote name").action(ArgAction::Set))
           .arg(
-            Arg::new("repetitions")
-              .short('r')
-              .long("repeat")
-              .value_name("REPETITIONS")
-              .help("Number of command repetitions")
-              .num_args(1)
-              .requires("command")
+            arg!(-r --repetitions <count> "Number of command repetitions")
               .value_parser(value_parser!(usize))
               .default_value("0")
               .action(ArgAction::Set),
