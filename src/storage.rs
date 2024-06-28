@@ -80,7 +80,7 @@ mod tests {
     // s.add_remote(String::from("Remote B"), u24::new(0xAF), 0xA7);
     //
     // let yaml_string = serde_yaml::to_string(&s).unwrap();
-    // println!("Config file:\n{:?}", yaml_string);
+    // println!("Config file:\n{yaml_string:?}");
     //
     // s.remove_remote(String::from("Remote A"));
     // s.remove_remote(String::from("Remote B"));
@@ -89,7 +89,7 @@ mod tests {
     //
     // s.remotes = serde_yaml::from_str::<HashMap<String, Remote>>(&yaml_string).unwrap();
     //
-    // println!("{:?}", s);
+    // println!("{s:?}");
     // assert_eq!(s.remotes.len(), 2);
     // assert_eq!(s.address(&String::from("Remote A")), Some(u24::new(0xAA)));
   }

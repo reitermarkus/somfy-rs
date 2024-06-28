@@ -8,24 +8,22 @@ use std::{
   thread,
 };
 
-use embedded_hal::{delay::DelayNs, digital::OutputPin};
 use serde_json::json;
 use uuid::Uuid;
 use webthing::{server::ActionGenerator, Action, BaseAction, BaseProperty, BaseThing, Thing};
 
 use crate::Storage;
-use somfy::{Command, Remote, Sender};
+use somfy::{Command, Remote, SendFrame};
 
-pub struct Generator<T, D> {
-  pub sender: Arc<Mutex<Sender<T, D>>>,
+pub struct Generator<S: SendFrame> {
+  pub sender: Arc<Mutex<S>>,
   pub storage: Arc<RwLock<Storage>>,
   pub remotes: HashMap<String, Arc<RwLock<Remote>>>,
 }
 
-impl<T, D, E> ActionGenerator for Generator<T, D>
+impl<S, E> ActionGenerator for Generator<S>
 where
-  T: OutputPin<Error = E> + Send + 'static,
-  D: DelayNs + Send + 'static,
+  S: SendFrame<Error = E> + Send + 'static,
   E: Error + Send + Sync + 'static,
 {
   fn generate(
@@ -38,7 +36,7 @@ where
     let thing_id = thing.upgrade()?.write().unwrap().get_id();
     let remote = self.remotes.get(&thing_id).cloned()?;
 
-    log::info!("Generating {} action for {}: {:?}", name, thing_id, input);
+    log::info!("Generating {name} action for {thing_id}: {input:?}");
 
     match name.as_ref() {
       "move" => Some(Box::new(MoveAction::new(input, thing, self.sender.clone(), self.storage.clone(), remote))),
@@ -47,18 +45,18 @@ where
   }
 }
 
-pub struct MoveAction<T, D> {
+pub struct MoveAction<S> {
   action: BaseAction,
-  sender: Arc<Mutex<Sender<T, D>>>,
+  sender: Arc<Mutex<S>>,
   storage: Arc<RwLock<Storage>>,
   remote: Arc<RwLock<Remote>>,
 }
 
-impl<T, D> MoveAction<T, D> {
+impl<S> MoveAction<S> {
   fn new(
     input: Option<serde_json::Map<String, serde_json::Value>>,
     thing: Weak<RwLock<Box<dyn Thing>>>,
-    sender: Arc<Mutex<Sender<T, D>>>,
+    sender: Arc<Mutex<S>>,
     storage: Arc<RwLock<Storage>>,
     remote: Arc<RwLock<Remote>>,
   ) -> Self {
@@ -71,10 +69,9 @@ impl<T, D> MoveAction<T, D> {
   }
 }
 
-impl<T, D, E> Action for MoveAction<T, D>
+impl<S, E> Action for MoveAction<S>
 where
-  T: OutputPin<Error = E> + Send + 'static,
-  D: DelayNs + Send + 'static,
+  S: SendFrame<Error = E> + Send + 'static,
   E: Error + Send + Sync + 'static,
 {
   fn set_href_prefix(&mut self, prefix: String) {
@@ -155,7 +152,7 @@ where
       let mut remote = remote.write().unwrap();
 
       log::info!("Sending command {command:?} with remote {}.", remote.address());
-      match remote.send_repeat(&mut sender, &mut *storage, command, 2) {
+      match remote.send_repeat(&mut *sender, &mut *storage, command, 2) {
         Ok(()) => {
           thing.set_property("position".to_owned(), target_position_value.clone()).unwrap();
         },

@@ -8,7 +8,7 @@ use embedded_hal::{
   },
 };
 
-use crate::Frame;
+use crate::{Frame, SendFrame};
 
 const SYMBOL_WIDTH: u32 = 1280;
 
@@ -32,19 +32,21 @@ where
   }
 }
 
-impl<T, D, E> Sender<T, D>
+impl<T, D, E> SendFrame for Sender<T, D>
 where
   T: OutputPin<Error = E>,
   D: DelayNs,
 {
+  type Error = E;
+
   /// Send a `Frame` once.
-  pub fn send_frame(&mut self, frame: &Frame) -> Result<(), E> {
+  fn send_frame(&mut self, frame: &Frame) -> Result<(), Self::Error> {
     self.send_frame_repeat(frame, 0)
   }
 
   /// Send a `Frame` with a given number of `repetitions`. The total number sent is
   /// `1 + repetitions`, i.e. `send_frame(…)` is the same as `send_frame_repeat(…, 0)`.
-  pub fn send_frame_repeat(&mut self, frame: &Frame, repetitions: usize) -> Result<(), E> {
+  fn send_frame_repeat(&mut self, frame: &Frame, repetitions: usize) -> Result<(), Self::Error> {
     self.wake_up()?;
 
     self.send_frame_with_type(frame, SyncType::Once)?;
@@ -55,7 +57,13 @@ where
 
     Ok(())
   }
+}
 
+impl<T, D, E> Sender<T, D>
+where
+  T: OutputPin<Error = E>,
+  D: DelayNs,
+{
   fn send_frame_with_type(&mut self, frame: &Frame, sync_type: SyncType) -> Result<(), E> {
     self.hardware_sync(sync_type)?;
     self.software_sync()?;

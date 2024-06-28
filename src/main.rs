@@ -26,7 +26,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
   let matches = Command::new("somfy")
     .arg(
       arg!(-f --config <FILE> "Path to the config file")
-        .num_args(1)
         .default_value(DEFAULT_CONFIG_FILE_PATH)
         .action(ArgAction::Set)
         .value_parser(value_parser!(PathBuf)),
@@ -53,6 +52,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
   transmitter.set_low();
 
   let mut sender = Sender { transmitter, delay: Delay };
+
+  // let mut sender = SpiSender::new();
 
   let storage_path: &PathBuf = matches.get_one("config").unwrap();
   let mut storage = Storage::new(storage_path)?;
@@ -100,10 +101,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
       let repetitions: usize = matches.get_one("repetitions").copied().unwrap();
 
       if let Some(remote) = storage.remote(remote_name) {
-        log::info!("Sending command “{:?}” with remote “{}”.", command, remote_name);
+        log::info!("Sending command “{command:?}” with remote “{remote_name}”.");
         remote.clone().send_repeat(&mut sender, &mut storage, command, repetitions)?;
       } else {
-        eprintln!("No remote with name “{}” found.", remote_name);
+        eprintln!("No remote with name “{remote_name}” found.");
         exit(1);
       }
     },

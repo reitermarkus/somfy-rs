@@ -37,17 +37,16 @@ impl Remote {
     self.send_repeat(sender, storage, command, 0)
   }
 
-  pub fn send_repeat<T, D, E, S, SE>(
+  pub fn send_repeat<S, TE, CS, SE>(
     &mut self,
-    sender: &mut Sender<T, D>,
-    storage: &mut S,
+    sender: &mut S,
+    storage: &mut CS,
     command: Command,
     repetitions: usize,
-  ) -> Result<(), Error<E, SE>>
+  ) -> Result<(), Error<TE, SE>>
   where
-    T: OutputPin<Error = E>,
-    D: DelayNs,
-    S: RollingCodeStorage<Error = SE>,
+    S: SendFrame<Error = TE>,
+    CS: RollingCodeStorage<Error = SE>,
   {
     let frame = Frame::builder()
       .key(0xA7)
@@ -57,14 +56,13 @@ impl Remote {
       .build()
       .unwrap();
 
-    self.rolling_code += 1;
-
-    if let Err(err) = storage.persist(&*self) {
-      return Err(Error::StorageError(err))
-    }
-
     if let Err(err) = sender.send_frame_repeat(&frame, repetitions) {
       return Err(Error::TransmitError(err))
+    }
+
+    self.rolling_code += 1;
+    if let Err(err) = storage.persist(&*self) {
+      return Err(Error::StorageError(err))
     }
 
     Ok(())
