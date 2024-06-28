@@ -16,6 +16,10 @@ impl Frame {
     FrameBuilder::new()
   }
 
+  pub fn rolling_code(&self) -> u16 {
+    u16::from_be_bytes(self.rolling_code)
+  }
+
   pub(crate) fn as_bytes(&self) -> &[u8] {
     // SAFETY: This is safe because a `Frame` is always
     // exactly 7 bytes containing valid data.
