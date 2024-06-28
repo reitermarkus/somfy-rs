@@ -13,7 +13,7 @@ log = "0.4"
 rppal = { version = "0.18", features = ["embedded-hal"] }
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1", optional = true }
-serde_yaml = { version = "0.8", optional = true }
+serde_yaml = { version = "0.9", optional = true }
 webthing = { version = "0.15", optional = true }
 uuid = { version = "1", optional = true }
 
