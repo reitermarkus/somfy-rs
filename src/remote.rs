@@ -1,10 +1,10 @@
 use embedded_hal::{delay::DelayNs, digital::OutputPin};
-use serde::{Deserialize, Serialize};
 use ux::u24;
 
 use super::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Remote {
   address: u24,
   rolling_code: u16,

@@ -4,25 +4,26 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ux = { package = "ux_serde", version = "0.2", features = ["serde"] }
+actix-rt = { version = "2", optional = true }
+clap = { version = "4", optional = true }
+ux = { package = "ux_serde", version = "0.2" }
 embedded-hal = "1"
-rppal = { version = "0.18", features = ["embedded-hal"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"
-clap = "4"
+env_logger = { version = "0.11", optional = true }
 log = "0.4"
-env_logger = "0.11"
+rppal = { version = "0.18", features = ["embedded-hal"] }
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1", optional = true }
+serde_yaml = { version = "0.8", optional = true }
 webthing = { version = "0.15", optional = true }
 uuid = { version = "1", optional = true }
-serde_json = { version = "1", optional = true }
-actix-rt = { version = "2", optional = true }
 
 [features]
-server = ["actix-rt", "webthing", "uuid", "serde_json"]
+serde = ["dep:serde", "ux/serde"]
+server = ["webthing", "uuid", "serde_json"]
 
 [[bin]]
 name = "somfy"
-required-features = ["server"]
+required-features = ["clap", "env_logger", "actix-rt", "serde_yaml", "serde"]
 
 [dev-dependencies]
 tempfile = "3.3.0"
