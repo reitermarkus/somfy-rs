@@ -106,6 +106,7 @@ impl DelayNs for OutputPinDelayProxy<'_> {
 pub struct SpiSender {}
 
 impl SpiSender {
+  #[allow(clippy::new_without_default)]
   pub const fn new() -> Self {
     Self {}
   }
