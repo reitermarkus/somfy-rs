@@ -19,11 +19,12 @@ uuid = { version = "1", optional = true }
 
 [features]
 serde = ["dep:serde", "ux/serde"]
+cli = ["dep:clap", "dep:env_logger", "dep:actix-rt", "dep:serde_yaml", "serde"]
 server = ["webthing", "uuid", "serde_json"]
 
 [[bin]]
 name = "somfy"
-required-features = ["clap", "env_logger", "actix-rt", "serde_yaml", "serde"]
+required-features = ["cli"]
 
 [dev-dependencies]
 tempfile = "3.3.0"
