@@ -17,7 +17,7 @@ ux = { package = "ux_serde", version = "0.2" }
 embedded-hal = "1"
 env_logger = { version = "0.11", optional = true }
 log = "0.4"
-rppal = { version = "0.18", features = ["embedded-hal"] }
+rppal = { version = "0.22", features = ["embedded-hal"] }
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1", optional = true }
 serde_yaml = { version = "0.9", optional = true }
